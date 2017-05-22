@@ -3,22 +3,22 @@
 #include <math.h>
 
 double g(double x, double n) {
-	return fmod((pow(x,2) + 2), n);
+	return fmod((pow(x,2) + 1), n);
 }
 
 /* Standard C Function: Greatest Common Divisor */
 double gcd (double a, double b )
 {
-  double c;
-  while (a != 0) {
-     c = a;
-     a = fmod(b, a);
-     b = c;
+  double temp;
+  while (b != 0) {
+      temp = fmod(a, b);
+      a = b;
+      b = temp;
   }
-  return b;
+  return a;
 }
 
-double pollard_ro(double x0, double n)
+double pollard_rho(double x0, double n)
 {
     double x = x0;
     double y = 2;
@@ -37,32 +37,69 @@ double pollard_ro(double x0, double n)
         return d;
 }
 
-double main() {
-	double n;
-	scanf("%lf",&n);
-	printf("n = %.0lf\n", n);
+double isprime(double n) {
+    double x;
+    double x0 = 2;
+    int i = 0;
+    while (n != 1) {
+        x = pollard_rho(x0, n);
+        if (x == -1) {
+//            i++;
+//            x0 = x0 * -2;
+//            //printf("Cambio x0: %.0lf (n = %.0lf)\n", x0, n);
+//            if (i == 10) {
+//                //printf("%.0lf  end\n", n);
+                break;
+//            }
+        }
+        else {
+            return 0;
+            x0 = 2;
+            //printf("%.0lf   %.0lf\n", n, x);
+            n = n / x;
+        }
+    }
+    return 1;
+}
 
-	//double[20];
-	double x = 1;
-	double x0 = 2;
-	int i = 0;
-	while (n != 1) {
-		x = pollard_ro(x0, n);
-		if (x == -1) {
-			i++;
-			x0++;
-			printf("i = %d   x0 = %.0lf n = %.0lf\n",i,x0,n);
-			if (i == 10) {
-				printf("%.0lf  end\n", n);
-				break;
-			}
-		}
-		else {
-			x0 = 2;
-			printf("%.0lf   %.0lf\n", n, x);
-			n = n / x;
-		}
-	}
+
+double primes_in_range(double n, double m) {
+    double i;
+    while (n <= m) {
+        i = 2;
+        while (i <= n) {
+            if (fmod(n,i) == 0) {
+                break;
+            }
+            i++;
+        }
+        if (i == n) {
+            //TODO aggiungi alla lista dinamica
+        }
+        n++;
+    }
+}
+
+double main(int argc, char* argv[]) {
+
+    double p;
+    double q;
+    printf("Inserisci il numero da fattorizzare: ");
+	scanf("%lf",&q);
+	printf("q = %.0lf\n", q);
+
+    p = 1 + 2*q;
+    printf("p = %.0lf\n", p);
+
+    double B;
+    double lp;
+    double exponent = sqrt(log(p)*log(log(p)));
+    lp = exp(exponent);
+    B = round(pow(lp, 1/sqrt(2) - 1/2));
+
+    printf("B = %lf\n", B);
+    primes_in_range(1,B);
+
 	return EXIT_SUCCESS;
 }
 
