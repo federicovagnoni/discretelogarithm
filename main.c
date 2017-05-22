@@ -122,10 +122,13 @@ void addelem(double value, struct list *list) {
 
 void freelist(struct list *list) {
     struct element *temp = NULL;
-    //TODO da finire
-    temp = list->TAIL->prev;
-
-    free(list->TAIL);
+    while (temp != list->HEAD) {
+        temp = list->TAIL->prev;
+        free(list->TAIL);
+        list->TAIL = temp;
+    }
+    free(list->HEAD);
+    free(list);
 }
 
 void printlist(struct list *list) {
@@ -181,6 +184,7 @@ double trialdivison(double n, struct list *list) {
         }
         temp = temp->next;
     }
+    return n;
 }
 
 
@@ -190,17 +194,17 @@ int isBsmooth(double m, double B) {
     struct list *list = primes_in_range(1, round(sqrt(m)));
     while (todivide != 1) {
         factor = trialdivison(todivide, list);
-        if (factor == -1) {
-            factor = todivide;
-        }
         if (factor > B) {
             printf("Il numero %.0lf ha %.0lf come fattore: non è %.0lf-smooth\n", m, factor, B);
+            freelist(list);
             return 0;
         }
+        printf("%.0lf ha fattore %.0lf\n", m, factor);
         //printf("%.0lf è un fattore\n", factor);
         todivide = todivide / factor;
         //printf("il numero diventerà %.0lf\n", todivide);
     }
+    freelist(list);
     return 1;
 }
 
@@ -216,8 +220,11 @@ double main(int argc, char* argv[]) {
     printf("p = %.0lf\n", p);
 
     exponent = sqrt(log(p)*log(log(p)));
+    printf("exponent = %.0lf\n", exponent);
     lp = exp(exponent);
-    B = round(pow(lp, 1/sqrt(2) - 1/2));
+    printf("L(p) = %.0lf\n", lp);
+    printf("L(p)^c = %.0lf\n", sqrt(lp));
+    B = round(sqrt(lp));
 
     printf("B = %.0lf\n", B);
 
@@ -225,7 +232,15 @@ double main(int argc, char* argv[]) {
     scanf("%lf",&a);
 
     struct list *primelist = primes_in_range(1,B);
-
+    //printlist(primelist);
+    struct element *temp;
+    for (temp = primelist->HEAD; temp != NULL; temp = temp->next) {
+        //printf("%.0lf\n", temp->value);
+        double candidate = fmod(pow(temp->value,3), p);
+        if (isBsmooth(candidate, B) == 1) {
+            printf("%.0lf (pari a %.0lf alla %.0lf) è %.0lf-smooth\n", candidate, temp->value, (double) 3, B);
+        }
+    }
 
     return EXIT_SUCCESS;
 }
