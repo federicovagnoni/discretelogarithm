@@ -6,18 +6,18 @@
 //#include <pari/pari.h>
 
 double g(double x, double n) {
-	return fmod((pow(x,2) + 1), n);
+    return fmod((pow(x, 2) + 1), n);
 }
 
 /* Standard C Function: Greatest Common Divisor */
-double gcd (double a, double b ) {
-  double temp;
-  while (b != 0) {
-      temp = fmod(a, b);
-      a = b;
-      b = temp;
-  }
-  return a;
+double gcd(double a, double b) {
+    double temp;
+    while (b != 0) {
+        temp = fmod(a, b);
+        a = b;
+        b = temp;
+    }
+    return a;
 }
 
 double pollard_rho(double x0, double n) {
@@ -50,10 +50,9 @@ double isprime(double n) {
 //            //printf("Cambio x0: %.0lf (n = %.0lf)\n", x0, n);
 //            if (i == 10) {
 //                //printf("%.0lf  end\n", n);
-                break;
+            break;
 //            }
-        }
-        else {
+        } else {
             return 0;
             x0 = 2;
             //printf("%.0lf   %.0lf\n", n, x);
@@ -128,15 +127,18 @@ void addelem(mpz_t value, struct list *list) {
 void freelist(struct list *list) {
     struct element *temp = NULL;
     if (list->count == 1) {
+        mpz_clear(list->HEAD->value);
         free(list->HEAD);
         free(list);
         return;
     }
     while (temp != list->HEAD) {
         temp = list->TAIL->prev;
+        mpz_clear(list->TAIL->value);
         free(list->TAIL);
         list->TAIL = temp;
     }
+//    mpz_clear(list->HEAD->value);
     free(list->HEAD);
     free(list);
 }
@@ -144,29 +146,26 @@ void freelist(struct list *list) {
 void printlist(struct list *list) {
     struct element *temp = list->HEAD;
     while (temp != NULL) {
-        mpz_out_str(stdout,10, temp->value);
-        printf("(alla %d)\n", temp->exp);
+        mpz_out_str(stdout, 10, temp->value);
+        printf("^%d", temp->exp);
         temp = temp->next;
+        if (temp != NULL) {
+            printf(" + ");
+        }
     }
+    printf("\n");
     free(temp);
 }
 
-//double *returnlist(struct list *linkedlist) {
-//    double *list;
-//    list = malloc(sizeof(double)*(linkedlist->count));
-//    if (list == NULL) {
-//        fprintf(stderr, "Error in malloc\n");
-//        exit(EXIT_FAILURE);
-//    }
-//    struct element *temp = linkedlist->HEAD;
-//    int i = 0;
-//    while (temp != NULL) {
-//        list[i] = temp->value;
-//        temp = temp->next;
-//        i++;
-//    }
-//    return list;
-//}
+void returnlist(struct list *linkedlist, mpz_t *returnedlist) {
+    struct element *temp = linkedlist->HEAD;
+    int i = 0;
+    while (temp != NULL) {
+        mpz_init_set(returnedlist[i], temp->value);
+        temp = temp->next;
+        i++;
+    }
+}
 
 
 struct list *primes_in_range(mpz_t n, mpz_t m) {
@@ -186,7 +185,7 @@ struct list *primes_in_range(mpz_t n, mpz_t m) {
             }
             mpz_add_ui(i, i, 1);
         }
-        if (mpz_cmp(i,en) == 0) {
+        if (mpz_cmp(i, en) == 0) {
             addelem(en, newlist);
         }
         mpz_add_ui(en, en, 1);
@@ -227,7 +226,7 @@ void trialdivison(mpz_t factor, mpz_t n, struct list *list) {
 void addnewfactor(mpz_t value, struct list *list) {
     struct element *temp;
     for (temp = list->HEAD; temp != NULL; temp = temp->next) {
-        if (mpz_cmp(temp->value, value)) {
+        if (mpz_cmp(temp->value, value) == 0) {
             temp->exp++;
             return;
         }
@@ -246,9 +245,11 @@ struct list *factorsbytrialdivision(mpz_t n) {
     struct list *primelist;
     mpz_t root;
     mpz_init(root);
-    while (!mpz_cmp_si(todivide, 1)) {
-        mpz_sqrt(root,todivide);
-        primelist = primes_in_range((__mpz_struct *) 1, root);
+    mpz_t uno;
+    mpz_init_set_ui(uno, 1);
+    while (mpz_cmp_ui(todivide, 1) != 0) {
+        mpz_sqrt(root, todivide);
+        primelist = primes_in_range(uno, root);
         trialdivison(factor, todivide, primelist);
         freelist(primelist);
         addnewfactor(factor, newlist);
@@ -308,15 +309,15 @@ int isBsmooth(mpz_t m, mpz_t B) {
     return 1;
 }
 
-double main(int argc, char* argv[]) {
+double main(int argc, char *argv[]) {
 
     unsigned long long p, q, a, B, lp, exponent;
 
     printf("Inserisci il numero da fattorizzare: ");
-	scanf("%llu",&q);
-	printf("q = %llu\n", q);
+    scanf("%llu", &q);
+    printf("q = %llu\n", q);
 
-    p = 1 + 2*q;
+    p = 1 + 2 * q;
     printf("p = %llu\n", p);
 
     exponent = (unsigned long long int) sqrtl(logl(p) * logl(logl(p)));
@@ -329,7 +330,7 @@ double main(int argc, char* argv[]) {
     printf("B = %llu\n", B);
 
     printf("Inserisci una radice primitiva: ");
-    scanf("%llu",&a);
+    scanf("%llu", &a);
     mpz_t Bm, am, pm;
     mpz_init_set_ui(Bm, B);
     mpz_init_set_ui(am, a);
@@ -339,8 +340,9 @@ double main(int argc, char* argv[]) {
     mpz_init_set_ui(uno, 1);
     struct list *primelist = primes_in_range(uno, Bm);
     //printlist(primelist);
-    struct element *temp;
 
+    mpz_t listprime[primelist->count];
+    returnlist(primelist, listprime);
 //    struct list *factorsofp_1 = factorsbytrialdivision(p-1);
 //    printlist(factorsofp_1);
 //
@@ -359,28 +361,45 @@ double main(int argc, char* argv[]) {
     mpz_init(randexp);
     srand(time(NULL));
 
-    for (i = 0; i < 50; i++) {
-        mpz_set_ui(randexp, rand() % (p - 2));
-        mpz_t candidate;
-        mpz_init(candidate);
-        mpz_powm(candidate, am, randexp, pm);
+    mpz_t candidate;
+    mpz_init(candidate);
+    mpz_t base;
+    mpz_init(base);
+    for (i = 0; i < B;) {
+
+        mpz_set_ui(randexp, rand() % p);
+        mpz_set(base, listprime[rand() % (primelist->count)]);
+        mpz_powm(candidate, base, randexp, pm);
+//        mpz_out_str(stdout, 10, candidate);
+//        printf(" (pari a ");
+//        mpz_out_str(stdout, 10, base);
+//        printf(" alla ");
+//        mpz_out_str(stdout, 10, randexp);
+//        printf(") in analisi\n", B);
+
         if (isBsmooth(candidate, Bm) == 1) {
             mpz_out_str(stdout, 10, candidate);
             printf(" (pari a ");
-            mpz_out_str(stdout, 10, am);
+            mpz_out_str(stdout, 10, base);
             printf(" alla ");
             mpz_out_str(stdout, 10, randexp);
             printf(") è %llu-smooth\n", B);
+            printlist(factorsbytrialdivision(candidate));
+            i++;
         } else {
-            mpz_out_str(stdout, 10, candidate);
-            printf(" (pari a ");
-            mpz_out_str(stdout, 10, am);
-            printf(" alla ");
-            mpz_out_str(stdout, 10, randexp);
-            printf(") NON è %llu-smooth\n", B);
+//            mpz_out_str(stdout, 10, candidate);
+//            printf(" (pari a ");
+//            mpz_out_str(stdout, 10, base);
+//            printf(" alla ");
+//            mpz_out_str(stdout, 10, randexp);
+//            printf(") NON è %llu-smooth\n", B);
         }
 
     }
+    mpz_clear(pm2);
+    mpz_clear(randexp);
+    mpz_clear(candidate);
+    mpz_clear(base);
 
 //    for (temp = primelist->HEAD; temp != NULL; temp = temp->next) {
 //        //printf("%.0lf\n", temp->value);
