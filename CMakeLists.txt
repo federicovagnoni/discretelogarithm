@@ -7,3 +7,4 @@ set(SOURCE_FILES main.c)
 add_executable(discretelogarithms ${SOURCE_FILES})
 
 target_link_libraries(discretelogarithms m)
+target_link_libraries(discretelogarithms gmp)
