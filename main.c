@@ -124,6 +124,38 @@ void addelem(mpz_t value, struct list *list) {
     list->count++;
 };
 
+struct element *addorderelem(mpz_t value, struct list *list) {
+    struct element *elem = init_elem(value);
+    struct element *temp;
+    for (temp = list->HEAD; temp != NULL; temp = temp->next) {
+        if (mpz_cmp(value, temp->value) > 0) {
+            if (temp->next != NULL) {
+                if (mpz_cmp(value, temp->next->value) < 0) {
+                    temp->next = elem;
+                    elem->prev = temp;
+                    elem->next = temp->next;
+                    temp->next->prev = elem;
+                    list->count++;
+                    return elem;
+                }
+            } else {
+                list->TAIL = elem;
+                list->TAIL->prev = temp;
+                temp->next = elem;
+                list->count++;
+                return elem;
+            }
+        }
+    }
+    if (list->HEAD == NULL) {
+        list->HEAD = elem;
+        list->TAIL = elem;
+        list->count++;
+        return elem;
+    }
+
+}
+
 void freelist(struct list *list) {
     struct element *temp = NULL;
     if (list->count == 1) {
@@ -262,6 +294,27 @@ struct list *factorsbytrialdivision(mpz_t n) {
 }
 
 
+void removeelem(mpz_t value, struct list *list) {
+    struct element *temp;
+    for (temp = list->HEAD; temp != NULL; temp = temp->next) {
+        if (mpz_cmp(temp->value, value) == 0) {
+            if (temp->prev != NULL) {
+                temp->prev->next = temp->next;
+            } else {
+                list->HEAD = temp->next;
+            }
+            if (temp->next != NULL) {
+                temp->next->prev = temp->prev;
+            } else {
+                list->TAIL = temp->prev;
+            }
+            list->count--;
+            free(temp);
+            return;
+        }
+    }
+}
+
 int isBsmooth(mpz_t m, mpz_t B) {
     mpz_t todivide;
     mpz_init_set(todivide, m);
@@ -311,7 +364,7 @@ int isBsmooth(mpz_t m, mpz_t B) {
 
 double main(int argc, char *argv[]) {
 
-    unsigned long long p, q, a, B, lp, exponent;
+    unsigned long long p, q, a, B, lp, exponent, t;
 
     printf("Inserisci il numero da fattorizzare: ");
     scanf("%llu", &q);
@@ -329,12 +382,16 @@ double main(int argc, char *argv[]) {
 
     printf("B = %llu\n", B);
 
-    printf("Inserisci una radice primitiva: ");
+    printf("Inserisci una radice primitiva (e base del logaritmo): ");
     scanf("%llu", &a);
-    mpz_t Bm, am, pm;
+
+    printf("Inserisci l'argomento del logaritmo: ");
+    scanf("%llu", &t);
+    mpz_t Bm, am, pm, tm;
     mpz_init_set_ui(Bm, B);
     mpz_init_set_ui(am, a);
     mpz_init_set_ui(pm, p);
+    mpz_init_set_ui(tm, t);
 
     mpz_t uno;
     mpz_init_set_ui(uno, 1);
@@ -358,16 +415,27 @@ double main(int argc, char *argv[]) {
     mpz_sub_ui(pm2, pm, 2);
     int i;
     mpz_t randexp;
-    mpz_init(randexp);
     srand(time(NULL));
 
     mpz_t candidate;
-    mpz_init(candidate);
     mpz_t base;
-    mpz_init(base);
-    for (i = 0; i < B;) {
 
-        mpz_set_ui(randexp, rand() % p);
+    struct list *tfactors;
+    struct list *candidatefactors;
+//    mpz_t tfactors_mpz[tfactors->count];
+
+    printf("I fattori di t sono: ");
+    printlist(tfactors);
+    struct list *newlist;
+    struct element *temp1, *temp2, *new;
+//    returnlist(tfactors, tfactors_mpz);
+
+    for (i = 0; i < B + B/2;) {
+        mpz_init(randexp);
+        mpz_init(candidate);
+        mpz_init(base);
+
+        mpz_set_ui(randexp, rand() % (p - 2));
         mpz_set(base, listprime[rand() % (primelist->count)]);
         mpz_powm(candidate, base, randexp, pm);
 //        mpz_out_str(stdout, 10, candidate);
@@ -377,7 +445,7 @@ double main(int argc, char *argv[]) {
 //        mpz_out_str(stdout, 10, randexp);
 //        printf(") in analisi\n", B);
 
-        if (isBsmooth(candidate, Bm) == 1) {
+        if (isBsmooth(candidate, Bm) == 1 && mpz_cmp(candidate, uno) != 0) {
             mpz_out_str(stdout, 10, candidate);
             printf(" (pari a ");
             mpz_out_str(stdout, 10, base);
@@ -385,8 +453,51 @@ double main(int argc, char *argv[]) {
             mpz_out_str(stdout, 10, randexp);
             printf(") è %llu-smooth\n", B);
             printlist(factorsbytrialdivision(candidate));
+            candidatefactors = factorsbytrialdivision(candidate);
+//            mpz_t candidatefactors_mpz[tfactors->count];
+//
+//            returnlist(candidatefactors, candidatefactors_mpz);
             i++;
-        } else {
+            int newcoeff;
+            newlist = init_list();
+
+            tfactors = factorsbytrialdivision(tm);
+            addelem(base, tfactors);
+            tfactors->TAIL->exp = (int) mpz_get_ui(randexp);
+
+            for (temp1 = tfactors->HEAD; temp1 != NULL; temp1 = temp1->next) {
+                for (temp2 = candidatefactors->HEAD; temp2 != NULL; temp2 = temp2->next) {
+                    if (mpz_cmp(temp1->value, temp2->value) == 0) {
+                        newcoeff = temp1->exp - temp2->exp;
+                        addelem(temp1->value, newlist);
+                        newlist->TAIL->exp = newcoeff;
+
+                        removeelem(temp1->value, tfactors);
+                        removeelem(temp2->value, candidatefactors);
+
+                    }
+                }
+            }
+            for (temp1 = tfactors->HEAD; temp1 != NULL; temp1 = temp1->next) {
+                addelem(temp1->value, newlist);
+                newlist->TAIL->exp = temp1->exp;
+            }
+            for (temp2 = candidatefactors->HEAD; temp2 != NULL; temp2 = temp2->next) {
+                addelem(temp2->value, newlist);
+                newlist->TAIL->exp = -(temp2->exp);
+            }
+
+            printf("La relazione è ");
+            printlist(newlist);
+            printf("\n");
+            freelist(init_list());
+            freelist(candidatefactors);
+            mpz_clear(randexp);
+            mpz_clear(base);
+            mpz_clear(candidate);
+        }
+
+        //else {
 //            mpz_out_str(stdout, 10, candidate);
 //            printf(" (pari a ");
 //            mpz_out_str(stdout, 10, base);
@@ -395,11 +506,7 @@ double main(int argc, char *argv[]) {
 //            printf(") NON è %llu-smooth\n", B);
         }
 
-    }
     mpz_clear(pm2);
-    mpz_clear(randexp);
-    mpz_clear(candidate);
-    mpz_clear(base);
 
 //    for (temp = primelist->HEAD; temp != NULL; temp = temp->next) {
 //        //printf("%.0lf\n", temp->value);
@@ -411,6 +518,7 @@ double main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 }
+
 
 
 
