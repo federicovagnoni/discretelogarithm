@@ -433,7 +433,7 @@ double main(int argc, char *argv[]) {
 //    struct list *newlist;
     struct element *temp1, *temp2;
 
-    int *matrix = NULL;
+    mpz_t *matrix = NULL;
     int k, u, z;
     mpz_t base;
     mpz_init(base);
@@ -449,7 +449,7 @@ double main(int argc, char *argv[]) {
 //            printf("\n");
             //mpz_set_ui(randexp, rand() % (p - 2));
             for (z = 1; mpz_cmp_ui(logpm, z) >= 0; z++) {
-                printf("Exp = %d\n", z);
+//                printf("Exp = %d\n", z);
                 //mpz_urandomm(randexp, randstate, logpm);
 //                printf("exp = %d\n", z);
                 mpz_set_ui(randexp, z);
@@ -457,16 +457,16 @@ double main(int argc, char *argv[]) {
                 //        mpz_set(base, listprime[rand() % (primelist->count)]);
                 mpz_powm(candidate, base, randexp, pm);
 
-                printf("candidate = ");
-                mpz_out_str(stdout,10,candidate);
-                printf("\n");
+//                printf("candidate = ");
+//                mpz_out_str(stdout,10,candidate);
+//                printf("\n");
 
                 for (k = 0; k < (int) mpz_get_ui(randexp) - 1; k++) {
                     mpz_mul(res, res, base);
                 }
-                printf("Res = ");
-                mpz_out_str(stdout,10,res);
-                printf("\n");
+//                printf("Res = ");
+//                mpz_out_str(stdout,10,res);
+//                printf("\n");
 
 
 
@@ -481,11 +481,11 @@ double main(int argc, char *argv[]) {
                     candidatefactors = factorsbytrialdivision(candidate);
 
 
-                    matrix = realloc(matrix, sizeof(int) * (primelist->count) * (i + 1) * 2);
+                    matrix = realloc(matrix, sizeof(mpz_t) * (primelist->count) * (i + 1) * 2);
 
                     int j;
                     for (j = 0; j < primelist->count * 2; j++) {
-                        *(matrix + i *(primelist->count * 2) + j) = 0;
+                        mpz_init_set_ui(*(matrix + i *(primelist->count * 2) + j), 0);
                     }
 
 
@@ -493,7 +493,7 @@ double main(int argc, char *argv[]) {
                     for (temp1 = primelist->HEAD; temp1 != NULL; temp1 = temp1->next) {
                         for (temp2 = candidatefactors->HEAD; temp2 != NULL; temp2 = temp2->next) {
                             if (mpz_cmp(temp1->value, temp2->value) == 0) {
-                                *(matrix + i * primelist->count * 2 + j) = temp2->exp;
+                                mpz_set_ui(*(matrix + i * primelist->count * 2 + j), (unsigned long) temp2->exp);
                             }
                         }
                         j++;
@@ -502,7 +502,7 @@ double main(int argc, char *argv[]) {
                     for (temp1 = primelist->HEAD; temp1 != NULL; temp1 = temp1->next) {
                             if (mpz_cmp(temp1->value, base) == 0) {
 //                                printf("Aggiungo %d in posizione %d\n", (int) mpz_get_ui(randexp), i *primelist->count * 2 + j);
-                                *(matrix + i * primelist->count * 2  + j) = (int) mpz_get_ui(randexp);
+                                mpz_set(*(matrix + i * primelist->count * 2  + j) ,randexp);
                             }
                             j++;
                     }
@@ -532,18 +532,25 @@ double main(int argc, char *argv[]) {
             if (j == primelist->count) {
                 printf("] = [ ");
             }
-            printf("%d ", *(matrix + k * primelist->count * 2 + j));
+            mpz_out_str(stdout, 10, *(matrix + k * primelist->count * 2 + j));
+            printf(" ");
 
         }
         printf("]\n");
     }
     printf("\n");
 
+    mpz_t temp, pm1;
+    mpz_init(temp);
+    mpz_init(pm1);
+    mpz_sub_ui(pm1, pm, 1);
+
     for (k = 0; k < primelist->count; k++) {
         for (j = primelist->count; j < primelist->count * 2; j++) {
             if (j >= primelist->count) {
-                *(matrix + k * primelist->count * 2 + (j - primelist->count)) -= *(matrix + k * primelist->count * 2 + j);
-                *(matrix + k * primelist->count * 2 + j) = 0;
+                mpz_sub(*(matrix + k * primelist->count * 2 + (j - primelist->count)), *(matrix + k * primelist->count * 2 + (j - primelist->count)), *(matrix + k * primelist->count * 2 + j));
+                mpz_mod(*(matrix + k * primelist->count * 2 + (j - primelist->count)),*(matrix + k * primelist->count * 2 + (j - primelist->count)), pm1);
+                mpz_set_ui(*(matrix + k * primelist->count * 2 + j), 0);
             }
         }
     }
@@ -554,12 +561,87 @@ double main(int argc, char *argv[]) {
             if (j == primelist->count) {
                 printf("] = [ ");
             }
-            printf("%d ", *(matrix + k * primelist->count * 2 + j));
-
+            mpz_out_str(stdout, 10, *(matrix + k * primelist->count * 2 + j));
+            printf(" ");
         }
         printf("]\n");
     }
     printf("\n");
+
+    int SIZE = primelist->count;
+    int ROWSIZE = primelist->count * 2;
+    mpz_t c;
+    mpz_t x[SIZE];
+    mpz_init(c);
+
+    for(i = SIZE - 1; i > 0; i--)
+    {
+        for(j = i - 1; j >= 0; j--)
+        {
+            if(i > j)
+            {
+                mpz_invert(temp, *(matrix + i * ROWSIZE + i), pm1);
+                printf("L'inverso di ");
+                mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + i));
+                printf(" modulo ");
+                mpz_out_str(stdout,10, pm1);
+                printf(" è :");
+                mpz_out_str(stdout,10,temp);
+                printf("\n");
+                mpz_mul(c,  *(matrix + j * ROWSIZE + i), temp);
+                printf("c = ");
+                mpz_out_str(stdout, 10, c);
+                printf("\n");
+                for(k = 0; k < SIZE + 1; k++)
+                {
+                    mpz_mul(temp, c, *(matrix + i * ROWSIZE + k));
+                    mpz_sub(*(matrix + j * ROWSIZE + k), *(matrix + j * ROWSIZE + k), temp);
+                    mpz_mod(*(matrix + j * ROWSIZE + k), *(matrix + j * ROWSIZE + k), pm1);
+                }
+            }
+        }
+    }
+
+
+    for (k = 0; k < primelist->count; k++) {
+        printf("[ ");
+        for (j = 0; j < primelist->count * 2; j++) {
+            if (j == primelist->count) {
+                printf("] = [ ");
+            }
+            mpz_out_str(stdout, 10, *(matrix + k * primelist->count * 2 + j));
+            printf(" ");
+        }
+        printf("]\n");
+    }
+    printf("\n");
+
+//    for (k = 0; k < primelist->count; k++) {
+//        printf("[ ");
+//        for (j = 0; j < primelist->count * 2; j++) {
+//            if (j == primelist->count) {
+//                printf("] = [ ");
+//            }
+//            printf("%d ", *(matrix + k * primelist->count * 2 + j));
+//
+//        }
+//        printf("]\n");
+//    }
+//    printf("\n");
+//
+//    float sum;
+//    /* this loop is for backward substitution*/
+//    for(i = 0; i < SIZE; i++)
+//    {
+//        sum = *(matrix + i * ROWSIZE + SIZE);
+//        for(j = 0; j < i; j++)
+//        {
+//            sum = sum - x[j] * (float) *(matrix + i * ROWSIZE + j);
+//        }
+//        x[i] = sum / *(matrix + i * ROWSIZE + i);
+//        printf("\n x%d => %f", i+1, x[i]);
+//    }
+
 
     mpz_clear(pm2);
 
