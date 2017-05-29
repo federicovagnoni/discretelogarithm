@@ -382,7 +382,7 @@ double main(int argc, char *argv[]) {
     printf("L(p) = %llu\n", lp);
     printf("L(p)^c = %.0Lf\n", sqrtl(lp));
     B = (unsigned long long int) ceill(sqrtl(lp));
-//    B = B + 4;
+    B = B + B * 3/2;
 
     printf("B = %llu\n", B);
 
@@ -417,8 +417,6 @@ double main(int argc, char *argv[]) {
     mpz_init(p2m);
     mpz_mul_ui(p2m, pm, 2);
     mpz_set_ui(logpm, (unsigned long) ceill(log(p)));
-//    mpz_out_str(stdout,10,logpm);
-//    fflush(stdout);
 
     int i = 0;
     mpz_t randexp;
@@ -467,159 +465,131 @@ double main(int argc, char *argv[]) {
     mpz_init(c);
 
     int isredundant = 0, equals = 0;
-    while (i < RELATIONS) {
+    while (i < primelist->count) {
 
-//        // search for non trivial relations
-//        for (u = 0; u < primelist->count; u++) { //first factor
-//            for (k = u + 1; k < primelist->count; k++) { //second factor
-//                for (y = 1; mpz_cmp_ui(logpm, y) >= 0; y++) { //first exponent
-//                    for (z = 1; mpz_cmp_ui(logpm, z) >= 0; z++) { //second exponent
-//                        mpz_set_ui(randexp1, y);
-//                        mpz_set_ui(randexp2, z);
-//                        mpz_powm(candidate1, listprime[u], randexp1, pm);
-//                        mpz_set(res, listprime[u]);
-//                        mpz_powm(candidate2, listprime[k], randexp2, pm);
-//                        mpz_mul(candidate, candidate1, candidate2);
-//                        mpz_mod(candidate, candidate, pm);
-//                        for (s = 0; s < (int) mpz_get_ui(randexp1) - 1; s++) {
-//                            mpz_mul(res, res, listprime[u]);
-//                        }
-//                        for (s = 0; s < (int) mpz_get_ui(randexp2) - 1; s++) {
-//                            mpz_mul(res, res, listprime[k]);
-//                        }
-//                            mpz_out_str(stdout, 10, candidate);
-//                            printf(" (pari a ");
-//                            mpz_out_str(stdout, 10, listprime[u]);
-//                            printf(" alla ");
-//                            mpz_out_str(stdout, 10, randexp1);
-//                            printf(" * ");
-//                            mpz_out_str(stdout, 10, listprime[k]);
-//                            printf(" alla ");
-//                            mpz_out_str(stdout, 10, randexp2);
-//                            printf(") in prova\n", B);
-//                            fflush(stdout);
-//        int k123;
-//        for (k123 = 0; k123 < 5; k123++) {
-//            if (k123 == 3) {
-//                printf("k123 = 3!\n");
-//                continue;
-//            }
-//        }
 
-//        for (mpz_set_ui(u, 1); mpz_cmp(u, pm1) <= 0; mpz_add_ui(u, u, 1)) {
-        mpz_urandomm(u, randstate, pm);
+        for (mpz_set_ui(u, 0); mpz_cmp(u, pm1) <= 0; mpz_add_ui(u, u, 1)) {
 
-        mpz_powm(candidate, am, u, pm);
-        mpz_set(res, am);
-        for (s = 0; s < (int) mpz_get_ui(u) - 1; s++) {
-            mpz_mul(res, res, am);
-        }
-
-        if (isBsmooth(candidate, Bm) == 1 && mpz_cmp(candidate, uno) != 0 &&
-            mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
-            mpz_out_str(stdout, 10, candidate);
-            printf(" (pari a ");
-            mpz_out_str(stdout, 10, am);
-            printf(" alla ");
-            mpz_out_str(stdout, 10, u);
-//                printf(" * ");
-//                mpz_out_str(stdout, 10, listprime[k]);
-//                printf(" alla ");
-//                mpz_out_str(stdout, 10, randexp2);
-            printf(") è %llu-smooth\n", B);
-            fflush(stdout);
-
-            candidatefactors = factorsbytrialdivision(candidate);
-
-            matrix = realloc(matrix, sizeof(mpz_t) * ROWSIZE * (i + 1));
-
-            int j;
-            for (j = 0; j < ROWSIZE; j++) {
-                mpz_init_set_ui(*(matrix + i * ROWSIZE + j), 0);
+            mpz_powm(candidate, am, u, pm);
+            mpz_set(res, am);
+            for (s = 0; s < (int) mpz_get_ui(u) - 1; s++) {
+                mpz_mul(res, res, am);
             }
 
+            if (isBsmooth(candidate, Bm) == 1 && mpz_cmp(candidate, uno) != 0) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
+                mpz_out_str(stdout, 10, candidate);
+                printf(" (pari a ");
+                mpz_out_str(stdout, 10, am);
+                printf(" alla ");
+                mpz_out_str(stdout, 10, u);
+                printf(") è %llu-smooth\n", B);
+                fflush(stdout);
 
-            j = 0;
-            for (temp1 = primelist->HEAD; temp1 != NULL; temp1 = temp1->next) {
-                for (temp2 = candidatefactors->HEAD; temp2 != NULL; temp2 = temp2->next) {
-                    if (mpz_cmp(temp1->value, temp2->value) == 0) {
-                        mpz_set_ui(*(matrix + i * ROWSIZE + j),
-                                   (unsigned long) temp2->exp);
-                    }
+                candidatefactors = factorsbytrialdivision(candidate);
+
+                matrix = realloc(matrix, sizeof(mpz_t) * ROWSIZE * (i + 1));
+
+                int j;
+                for (j = 0; j < ROWSIZE; j++) {
+                    mpz_init_set_ui(*(matrix + i * ROWSIZE + j), 0);
                 }
-                j++;
-            }
-
-            mpz_set(*(matrix + i * ROWSIZE + ROWSIZE - 1), u);
-
-//                j = primelist->count;
-//                for (temp1 = primelist->HEAD; temp1 != NULL; temp1 = temp1->next) {
-//                    if (mpz_cmp(temp1->value, am) == 0) {
-////                                printf("Aggiungo %d in posizione %d\n", (int) mpz_get_ui(randexp), i *primelist->count * 2 + j);
-//                        mpz_set(*(matrix + i * ROWSIZE + j), u);
-//                    }
-//                    if (mpz_cmp(temp1->value, listprime[k]) == 0) {
-//                        mpz_set(*(matrix + i * ROWSIZE + j), randexp2);
-//                    }
-//                    j++;
-//                }
-
-            // Faccio le sottrazioni e rimetto a posto le righe
-//                for (j = primelist->count; j < ROWSIZE; j++) {
-//                    if (j >= primelist->count) {
-//                        mpz_sub(*(matrix + i * ROWSIZE + (j - primelist->count)),
-//                                *(matrix + i * ROWSIZE + (j - primelist->count)),
-//                                *(matrix + i * ROWSIZE + j));
-//                        mpz_mod(*(matrix + i * ROWSIZE + (j - primelist->count)),
-//                                *(matrix + i * ROWSIZE + (j - primelist->count)), pm1);
-//                        mpz_set_ui(*(matrix + i * ROWSIZE + j), 0);
-//                    }
-//                }
-
-            freelist(candidatefactors);
 
 
-//                for (x = 0; x < i + 1; x++) {
-//                    printf("[ ");
-//                    for (j = 0; j < ROWSIZE; j++) {
-//                        if (j == primelist->count) {
-//                            printf("] = [ ");
-//                        }
-//                        mpz_out_str(stdout, 10, *(matrix + x * ROWSIZE + j));
-//                        printf(" ");
-//                    }
-//                    printf("]\n");
-//                }
-//                printf("\n");
-//                fflush(stdout);
-
-            // Vedo se ci sono righe uguali
-
-            equals = 0;
-            isredundant = 0;
-
-            if (i > 0) {
-                for (l = i - 1; l >= 0; l--) {
-                    for (j = 0; j < primelist->count; j++) {
-                        if (mpz_cmp(*(matrix + i * ROWSIZE + j), *(matrix + l * ROWSIZE + j)) == 0) {
-                            equals++;
-                            if (equals == primelist->count) {
-                                isredundant = 1;
-                            }
+                j = 0;
+                for (temp1 = primelist->HEAD; temp1 != NULL; temp1 = temp1->next) {
+                    for (temp2 = candidatefactors->HEAD; temp2 != NULL; temp2 = temp2->next) {
+                        if (mpz_cmp(temp1->value, temp2->value) == 0) {
+                            mpz_set_ui(*(matrix + i * ROWSIZE + j),
+                                       (unsigned long) temp2->exp);
                         }
                     }
-                    equals = 0;
+                    j++;
+                }
+
+                mpz_set(*(matrix + i * ROWSIZE + ROWSIZE - 1), u);
+
+                freelist(candidatefactors);
+
+                // Vedo se ci sono righe uguali
+                equals = 0;
+                isredundant = 0;
+
+                if (i > 0) {
+                    for (l = i - 1; l >= 0; l--) {
+                        for (j = 0; j < primelist->count; j++) {
+                            if (mpz_cmp(*(matrix + i * ROWSIZE + j), *(matrix + l * ROWSIZE + j)) == 0) {
+                                equals++;
+                                if (equals == primelist->count) {
+                                    isredundant = 1;
+                                }
+                            }
+                        }
+                        equals = 0;
+                    }
+                }
+
+                // Se ci sono esco e provo con un'altra combinazione
+                if (isredundant == 1) {
+                    continue;
+                }
+
+
+                int zeros = 0;
+                isredundant = 0;
+
+                for (x = 0; x < ROWSIZE - 1; x++) {
+                    if (mpz_cmp_ui(*(matrix + i * ROWSIZE + x), 0) != 0) {
+                        if (mpz_invert(invers, *(matrix + i * ROWSIZE + x), pm1) == 0) {
+                            isredundant = 1;
+                        } else {
+                            isredundant = 0;
+                        }
+                    } else {
+                        zeros++;
+                    }
+                }
+
+                if (zeros == ROWSIZE - 2 && isredundant == 0) {
+                    for (x = 0; x < ROWSIZE; x++) {
+                        mpz_mul(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), invers);
+                        mpz_mod(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), pm1);
+                        isredundant = 0;
+                    }
+                } else {
+                    isredundant = 1;
+                }
+
+                if (isredundant == 1) {
+                    continue;
+                }
+
+                equals = 0;
+                isredundant = 0;
+
+                if (i > 0) {
+                    for (l = i - 1; l >= 0; l--) {
+                        for (j = 0; j < primelist->count; j++) {
+                            if (mpz_cmp(*(matrix + i * ROWSIZE + j), *(matrix + l * ROWSIZE + j)) == 0) {
+                                equals++;
+                                if (equals == primelist->count) {
+                                    isredundant = 1;
+                                }
+                            }
+                        }
+                        equals = 0;
+                    }
+                }
+
+                if (isredundant == 1) {
+                    continue;
+                }
+
+
+                i++;
+                if (i == RELATIONS) {
+                    break;
                 }
             }
-            printf("u = ");
-            mpz_out_str(stdout, 10, u);
-            printf("\n");
-            // Se ci sono esco e provo con un'altra combinazione
-            if (isredundant == 1) {
-                printf("Però è uguale ad un'altra riga!\n");
-                continue;
-            }
-            i++;
             if (i == RELATIONS) {
                 break;
             }
@@ -628,175 +598,6 @@ double main(int argc, char *argv[]) {
             break;
         }
     }
-
-//
-//                            printf("Prima di Gauss: \n");
-//
-//                            for (x = 0; x < i + 1; x++) {
-//                                printf("[ ");
-//                                for (j = 0; j < ROWSIZE; j++) {
-//                                    if (j == primelist->count) {
-//                                        printf("] = [ ");
-//                                    }
-//                                    mpz_out_str(stdout, 10, *(matrix + x * ROWSIZE + j));
-//                                    printf(" ");
-//                                }
-//                                printf("]\n");
-//                            }
-//                            printf("\n");
-//                            fflush(stdout);
-//
-//                            // comincio a fare la Forward elimination
-//                            if (i > 0) {
-//                                for (x = 0; x < i + 1; x++) {
-//                                    for (j = x + 1; j < i + 1; j++) {
-//                                        mpz_invert(invers, *(matrix + x * ROWSIZE + x), pm1);
-//                                        printf("L'inverso di ");
-//                                        mpz_out_str(stdout, 10, *(matrix + x * ROWSIZE + x));
-//                                        printf(" modulo ");
-//                                        mpz_out_str(stdout, 10, pm1);
-//                                        printf(" è :");
-//                                        mpz_out_str(stdout, 10, invers);
-//                                        printf("\n");
-//                                        mpz_mul(c, *(matrix + j * ROWSIZE + x), invers);
-//                                        mpz_mod(c, c, pm1);
-//                                        if (mpz_cmp(*(matrix + x * ROWSIZE + x), *(matrix + j * ROWSIZE + x)) == 0) {
-//                                            mpz_set_ui(c, 1);
-//                                        }
-//
-////                                        printf("c = ");
-////                                        mpz_out_str(stdout, 10, c);
-////                                        printf("\n");
-//                                        for (l = 0; l < SIZE; l++) {
-//                                            mpz_mul(temp, c, *(matrix + x * ROWSIZE + l));
-////                                            printf("c * matrix[%d][%d] = ", x, l);
-////                                            mpz_out_str(stdout, 10, temp);
-////                                            printf("\n");
-//                                            mpz_sub(*(matrix + j * ROWSIZE + l), *(matrix + j * ROWSIZE + l), temp);
-//                                            mpz_mod(*(matrix + j * ROWSIZE + l), *(matrix + j * ROWSIZE + l), pm1);
-//                                        }
-//
-//                                    }
-////                                    if (mpz_invert(temp, *(matrix + x * ROWSIZE + x), pm1) == 0) {
-////                                        break;
-////                                    }
-//                                }
-//                            }
-//
-//                            printf("Dopo Gauss: \n");
-//
-//                            for (x = 0; x < i + 1; x++) {
-//                                printf("[ ");
-//                                for (j = 0; j < ROWSIZE; j++) {
-//                                    if (j == primelist->count) {
-//                                        printf("] = [ ");
-//                                    }
-//                                    mpz_out_str(stdout, 10, *(matrix + x * ROWSIZE + j));
-//                                    printf(" ");
-//                                }
-//                                printf("]\n");
-//                            }
-//                            printf("\n");
-//                            fflush(stdout);
-//
-//                            // Ci sono ancora righe uguali?
-//                            isredundant = 0;
-//                            equals = 0;
-//
-//                            if (i > 0) {
-//                                for (l = i - 1; l >= 0; l--) {
-//                                    for (j = 0; j < primelist->count; j++) {
-//                                        if (mpz_cmp(*(matrix + i * ROWSIZE + j),
-//                                                    *(matrix + l * ROWSIZE + j)) == 0) {
-//                                            equals++;
-//                                            if (equals == primelist->count) {
-//                                                isredundant = 1;
-//                                            }
-////                                            printf("Confronto la riga %d con la riga %d. Equals è pari a %d\n", i, t, equals);
-//                                        }
-//                                    }
-//                                    equals = 0;
-//                                }
-//                            }
-//
-//                            // Se si lascio perdere e provo un'altra riga
-//                            if (isredundant == 1) {
-//                                printf("Però è uguale ad un'altra riga tentativo 2!\n");
-//                                equals = 0;
-//                                isredundant = 0;
-//                                continue;
-//                            }
-//
-//                            equals = 0;
-//                            isredundant = 0;
-//                            // Ci sono righe pari a 0?
-//                            for (j = 0; j < primelist->count * 2; j++) {
-//                                if (mpz_cmp_ui(*(matrix + i * ROWSIZE + j), 0) == 0) {
-//                                    equals++;
-//                                    if (equals == primelist->count * 2) {
-//                                        isredundant = 1;
-//                                    }
-////                                            printf("Confronto la riga %d con la riga %d. Equals è pari a %d\n", i, t, equals);
-//                                }
-//                            }
-//
-//                            // Se si lascio perdere e provo un'altra riga
-//                            if (isredundant == 1) {
-//                                printf("Però la riga è ridondante... sono tutti 0!\n");
-//                                equals = 0;
-//                                isredundant = 0;
-//                                continue;
-//                            }
-//
-//                            for (x = 0; x < i + 1; x++) {
-//                                printf("[ ");
-//                                for (j = 0; j < ROWSIZE; j++) {
-//                                    if (j == primelist->count) {
-//                                        printf("] = [ ");
-//                                    }
-//                                    mpz_out_str(stdout, 10, *(matrix + x * ROWSIZE + j));
-//                                    printf(" ");
-//                                }
-//                                printf("]\n");
-//                            }
-//                            printf("\n");
-//
-//
-//                            // Vedo se l'elemento matrix[i][i] è invertibile tranne l'ultimo (di cui non ci importa)
-//                            if (i + 1 != primelist->count) {
-//                                if (mpz_invert(invers, *(matrix + i * ROWSIZE + i), pm1) == 0) {
-//                                    printf("Però ");
-//                                    mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + i));
-//                                    printf(" non è invertibile!\n\n");
-//                                    continue;
-//                                }
-//                                mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + i));
-//                                printf(" è invertibile! ");
-//                                mpz_out_str(stdout, 10, invers);
-//                                printf("\n\n");
-//                            }
-
-
-//        if (i == primelist->count) {
-//            break;
-//        }
-//    }
-//    if (i == primelist->count) {
-//        break;
-//    }
-//}
-//
-//if (i == primelist->count) {
-//break;
-//}
-//}
-//if (i == primelist->count) {
-//break;
-//}
-//}
-//if (i == primelist->count) {
-//break;
-//}
 
     mpz_clear(candidate1);
     mpz_clear(candidate2);
@@ -810,67 +611,15 @@ double main(int argc, char *argv[]) {
     printf("Finito ora stampo\n");
     int j;
 
-    for (k = 0; k < RELATIONS; k++) {
+    for (k = 0; k < primelist->count; k++) {
         printf("[ ");
         for (j = 0; j < ROWSIZE; j++) {
-//            if (j == primelist->count) {
-//                printf("] = [ ");
-//            }
             mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
             printf(" ");
         }
         printf("]\n");
     }
     printf("\n");
-
-    for (i = 0; i < ROWSIZE; i++) {
-        mpz_invert(temp, *(matrix + i * ROWSIZE + i), pm1);
-        if (mpz_cmp_ui(*(matrix + i * ROWSIZE + i), 0) == 0) {
-            printf("Matrix[%d][%d] = ", i, i);
-            mpz_out_str(stdout, 10 , *(matrix + i * ROWSIZE + i));
-            printf("\n");
-            mpz_set_ui(temp, 0);
-        }
-        for (j = i + 1; j < ROWSIZE; j++) {
-            printf("i = %d\n", i);
-            printf("L'inverso di ");
-            mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + i));
-            printf(" modulo ");
-            mpz_out_str(stdout, 10, pm1);
-            printf(" è :");
-            mpz_out_str(stdout, 10, temp);
-            printf("\n");
-            mpz_mul(c, *(matrix + j * ROWSIZE + i), temp);
-            if (mpz_cmp(*(matrix + i * ROWSIZE + i), *(matrix + j * ROWSIZE + i)) == 0) {
-                mpz_set_ui(c, 1);
-            }
-
-//            printf("c = ");
-//            mpz_out_str(stdout, 10, c);
-//            printf("\n");
-            for (k = 0; k < ROWSIZE; k++) {
-                mpz_mul(c, c, *(matrix + i * ROWSIZE + k));
-                mpz_sub(*(matrix + j * ROWSIZE + k), *(matrix + j * ROWSIZE + k), c);
-                mpz_mod(*(matrix + j * ROWSIZE + k), *(matrix + j * ROWSIZE + k), pm1);
-            }
-        }
-        mpz_clear(temp);
-        mpz_init(temp);
-    }
-
-    for (k = 0; k < RELATIONS; k++) {
-        printf("[ ");
-        for (j = 0; j < ROWSIZE; j++) {
-//            if (j == primelist->count) {
-//                printf("] = [ ");
-//            }
-            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
-            printf(" ");
-        }
-        printf("]\n");
-    }
-    printf("\n");
-
 
 
 //    mpz_invert(invers, *(matrix + (SIZE - 1) * ROWSIZE + (SIZE- 1)), pm1);
