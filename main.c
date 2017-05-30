@@ -5,62 +5,67 @@
 #include <time.h>
 //#include <pari/pari.h>
 
-double g(double x, double n) {
-    return fmod((pow(x, 2) + 1), n);
+void g(mpz_t result, mpz_t x, mpz_t n) {
+    mpz_t pow;
+    mpz_init(pow);
+    mpz_pow_ui(pow, x, 2);
+    mpz_mul_ui(pow, pow, 1);
+    mpz_add_ui(pow, pow, 1);
+    mpz_mod(pow, pow, n);
+    mpz_set(result, pow);
+    return;
 }
 
-/* Standard C Function: Greatest Common Divisor */
-double gcd(double a, double b) {
-    double temp;
-    while (b != 0) {
-        temp = fmod(a, b);
-        a = b;
-        b = temp;
-    }
-    return a;
-}
+void pollard_rho(mpz_t factor, mpz_t n) {
+    mpz_t x, y, d, sub;
+    mpz_init(sub);
+    mpz_init_set_ui(x, 1);
+    mpz_init_set_ui(y, 1);
+    mpz_init_set_ui(d, 1);
 
-double pollard_rho(double x0, double n) {
-    double x = x0;
-    double y = 2;
-    double d = 1;
-    while (d == 1) {
-        x = g(x, n);
+    while (mpz_cmp_ui(d, 1) == 0) {
+        g(x, x, n);
         //printf("x = %.0lf\n", x);
-        y = g(g(y, n), n);
+        g(y, y, n);
+        g(y, y, n);
         //printf("y = %.0lf\n", y);
-        d = gcd(fabs(x - y), n);
+        mpz_sub(sub, x, y);
+        mpz_abs(sub, sub);
+        mpz_gcd(d, sub, n);
         //printf("d = %.0lf\n", d);
     }
-    if (d == n)
-        return -1;
-    else
-        return d;
+    if (mpz_cmp(d, n) == 0) {
+        mpz_set_ui(factor, (unsigned long) -1);
+        return;
+    } else {
+        mpz_set(factor, d);
+        return;
+    }
 }
 
-double isprime(double n) {
-    double x;
-    double x0 = 2;
-    int i = 0;
-    while (n != 1) {
-        x = pollard_rho(x0, n);
-        if (x == -1) {
-//            i++;
-//            x0 = x0 * -2;
-//            //printf("Cambio x0: %.0lf (n = %.0lf)\n", x0, n);
-//            if (i == 10) {
-//                //printf("%.0lf  end\n", n);
-            break;
-//            }
-        } else {
-            return 0;
-            x0 = 2;
-            //printf("%.0lf   %.0lf\n", n, x);
-            n = n / x;
-        }
-    }
-    return 1;
-}
+//double isprime(double n) {
+//    double x;
+//    double x0 = 2;
+//    int i = 0;
+//    while (n != 1) {
+//        x = pollard_rho(x0, n);
+//        if (x == -1) {
+////            i++;
+////            x0 = x0 * -2;
+////            //printf("Cambio x0: %.0lf (n = %.0lf)\n", x0, n);
+////            if (i == 10) {
+////                //printf("%.0lf  end\n", n);
+//            break;
+////            }
+//        } else {
+//            return 0;
+//            x0 = 2;
+//            //printf("%.0lf   %.0lf\n", n, x);
+//            n = n / x;
+//        }
+//    }
+//    return 1;
+//}
 
 
 struct element {
@@ -283,12 +288,58 @@ struct list *factorsbytrialdivision(mpz_t n) {
         primelist = primes_in_range(uno, root);
         trialdivison(factor, todivide, primelist);
         freelist(primelist);
+        if (mpz_cmp_ui(factor, -1) == 0) {
+            break;
+        }
         addnewfactor(factor, newlist);
         mpz_div(todivide, todivide, factor);
     }
     mpz_clear(factor);
     mpz_clear(todivide);
     mpz_clear(root);
+    return newlist;
+}
+
+struct list *factorsbypollard(mpz_t n) {
+    struct list *newlist = init_list();
+    mpz_t factor;
+    mpz_init(factor);
+    mpz_t todivide;
+    mpz_init_set(todivide, n);
+    mpz_t root;
+    mpz_init(root);
+    mpz_t uno,due;
+    mpz_init_set_ui(uno, 1);
+    mpz_init_set_ui(due, 2);
+    mpz_t mod;
+    mpz_init(mod);
+
+    mpz_mod(mod, todivide, due);
+    while (mpz_cmp_ui(mod, 0) == 0) {
+        mpz_div(todivide, todivide, due);
+        addnewfactor(due, newlist);
+        mpz_mod(mod, todivide, due);
+    }
+
+    while (mpz_cmp_ui(todivide, 1) != 0) {
+
+        pollard_rho(factor, todivide);
+
+        if (mpz_cmp_ui(factor, -1) == 0) {
+            addnewfactor(todivide, newlist);
+            break;
+        }
+
+        addnewfactor(factor, newlist);
+        mpz_div(todivide, todivide, factor);
+
+    }
+    mpz_clear(factor);
+    mpz_clear(todivide);
+    mpz_clear(root);
+    mpz_clear(mod);
+    mpz_clear(uno);
+    mpz_clear(due);
     return newlist;
 }
 
@@ -363,6 +414,15 @@ int isBsmooth(mpz_t m, mpz_t B) {
     mpz_clear(uno);
     freelist(list);
     return 1;
+
+//    struct list *list = factorsbypollard(m);
+//    printlist(list);
+//    printf("\n");
+//    fflush(stdout);
+//    if (mpz_cmp(list->TAIL->value, B) < 0) {
+//        return 1;
+//    }
+//    return 0;
 }
 
 double main(int argc, char *argv[]) {
@@ -385,16 +445,53 @@ double main(int argc, char *argv[]) {
     B = B + B * 3/2;
 
     printf("B = %llu\n", B);
+    mpz_t am, pm, pm1, exp, try, qm, due;
+    mpz_init(am);
+    mpz_init(exp);
+    mpz_init(try);
+    mpz_init_set_ui(pm, p);
+    mpz_init_set_ui(qm, q);
+    mpz_init_set_ui(due, 2);
+    mpz_init(pm1);
+    mpz_sub_ui(pm1, pm, 1);
+
+    int count = 0;
+    struct element *divisor;
+    struct list *divisors = factorsbypollard(pm1); //init_list();
+//    addnewfactor(qm, divisors);
+//    addnewfactor(due, divisors);
+
+    printlist(divisors);
+
+    for (mpz_set_ui(am, 2); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
+        for (divisor = divisors->HEAD; divisor != NULL; divisor = divisor->next) {
+            mpz_div(exp, pm1, divisor);
+            mpz_powm(try, am, exp, pm);
+            if (mpz_cmp_ui(try, 1) == 0) {
+                break;
+            } else {
+                count++;
+            }
+        }
+        if (count == divisors->count) {
+            mpz_out_str(stdout, 10, am);
+            printf(" è una radice primitiva\n");
+            break;
+        } else {
+            count = 0;
+        }
+
+    }
+
 
     printf("Inserisci una radice primitiva (e base del logaritmo): ");
     scanf("%llu", &a);
 
     printf("Inserisci l'argomento del logaritmo: ");
     scanf("%llu", &t);
-    mpz_t Bm, am, pm, tm;
+    mpz_t Bm, tm;
     mpz_init_set_ui(Bm, B);
-    mpz_init_set_ui(am, a);
-    mpz_init_set_ui(pm, p);
+    mpz_set_ui(am, a);
     mpz_init_set_ui(tm, t);
 
     mpz_t uno;
@@ -450,10 +547,9 @@ double main(int argc, char *argv[]) {
     mpz_init(candidate1);
     mpz_init(candidate2);
 
-    mpz_t temp, pm1;
+    mpz_t temp;
     mpz_init(temp);
-    mpz_init(pm1);
-    mpz_sub_ui(pm1, pm, 1);
+
     mpz_t invers;
     mpz_init(invers);
 
@@ -468,126 +564,152 @@ double main(int argc, char *argv[]) {
     while (i < primelist->count) {
 
 
-        for (mpz_set_ui(u, 0); mpz_cmp(u, pm1) <= 0; mpz_add_ui(u, u, 1)) {
+        for (mpz_set_ui(u, 1); mpz_cmp(u, pm1) <= 0; mpz_add_ui(u, u, 1)) {
 
             mpz_powm(candidate, am, u, pm);
-            mpz_set(res, am);
-            for (s = 0; s < (int) mpz_get_ui(u) - 1; s++) {
-                mpz_mul(res, res, am);
-            }
+//            mpz_pow_ui(res, am, mpz_get_ui(u));
 
-            if (isBsmooth(candidate, Bm) == 1 && mpz_cmp(candidate, uno) != 0) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
-                mpz_out_str(stdout, 10, candidate);
-                printf(" (pari a ");
-                mpz_out_str(stdout, 10, am);
-                printf(" alla ");
-                mpz_out_str(stdout, 10, u);
-                printf(") è %llu-smooth\n", B);
+//            mpz_out_str(stdout, 10, res);
+//            printf("\n");
+//            mpz_out_str(stdout, 10, u);
+//            printf("\n");
+//            fflush(stdout);
+//
+            mpz_out_str(stdout, 10, candidate);
+            printf(" (pari a ");
+            mpz_out_str(stdout, 10, am);
+            printf(" alla ");
+            mpz_out_str(stdout, 10, u);
+            printf(") in prova\n");
+            fflush(stdout);
+
+            if (mpz_cmp(candidate, uno) != 0) {// && mpz_cmp(res, pm) > 0) {
+                printf("Vedo se è Bsmooth\n");
                 fflush(stdout);
+                if (isBsmooth(candidate, Bm) == 1) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
+                    mpz_out_str(stdout, 10, candidate);
+                    printf(" (pari a ");
+                    mpz_out_str(stdout, 10, am);
+                    printf(" alla ");
+                    mpz_out_str(stdout, 10, u);
+                    printf(") è %llu-smooth\n", B);
+                    fflush(stdout);
 
-                candidatefactors = factorsbytrialdivision(candidate);
+                    candidatefactors = factorsbytrialdivision(candidate);
+                    printlist(candidatefactors);
 
-                matrix = realloc(matrix, sizeof(mpz_t) * ROWSIZE * (i + 1));
+                    matrix = realloc(matrix, sizeof(mpz_t) * ROWSIZE * (i + 1));
 
-                int j;
-                for (j = 0; j < ROWSIZE; j++) {
-                    mpz_init_set_ui(*(matrix + i * ROWSIZE + j), 0);
-                }
-
-
-                j = 0;
-                for (temp1 = primelist->HEAD; temp1 != NULL; temp1 = temp1->next) {
-                    for (temp2 = candidatefactors->HEAD; temp2 != NULL; temp2 = temp2->next) {
-                        if (mpz_cmp(temp1->value, temp2->value) == 0) {
-                            mpz_set_ui(*(matrix + i * ROWSIZE + j),
-                                       (unsigned long) temp2->exp);
-                        }
+                    int j;
+                    for (j = 0; j < ROWSIZE; j++) {
+                        mpz_init_set_ui(*(matrix + i * ROWSIZE + j), 0);
                     }
-                    j++;
-                }
 
-                mpz_set(*(matrix + i * ROWSIZE + ROWSIZE - 1), u);
 
-                freelist(candidatefactors);
-
-                // Vedo se ci sono righe uguali
-                equals = 0;
-                isredundant = 0;
-
-                if (i > 0) {
-                    for (l = i - 1; l >= 0; l--) {
-                        for (j = 0; j < primelist->count; j++) {
-                            if (mpz_cmp(*(matrix + i * ROWSIZE + j), *(matrix + l * ROWSIZE + j)) == 0) {
-                                equals++;
-                                if (equals == primelist->count) {
-                                    isredundant = 1;
-                                }
+                    j = 0;
+                    for (temp1 = primelist->HEAD; temp1 != NULL; temp1 = temp1->next) {
+                        for (temp2 = candidatefactors->HEAD; temp2 != NULL; temp2 = temp2->next) {
+                            if (mpz_cmp(temp1->value, temp2->value) == 0) {
+                                mpz_set_ui(*(matrix + i * ROWSIZE + j), (unsigned long) temp2->exp);
                             }
                         }
-                        equals = 0;
+                        j++;
                     }
-                }
 
-                // Se ci sono esco e provo con un'altra combinazione
-                if (isredundant == 1) {
-                    continue;
-                }
+                    mpz_set(*(matrix + i * ROWSIZE + ROWSIZE - 1), u);
+
+                    freelist(candidatefactors);
+
+                    // Vedo se ci sono righe uguali
+                    equals = 0;
+                    isredundant = 0;
+
+                    if (i > 0) {
+                        for (l = i - 1; l >= 0; l--) {
+                            for (j = 0; j < primelist->count; j++) {
+                                if (mpz_cmp(*(matrix + i * ROWSIZE + j), *(matrix + l * ROWSIZE + j)) == 0) {
+                                    equals++;
+                                    if (equals == primelist->count) {
+                                        isredundant = 1;
+                                    }
+                                }
+                            }
+                            equals = 0;
+                        }
+                    }
+
+                    // Se ci sono esco e provo con un'altra combinazione
+                    if (isredundant == 1) {
+                        printf("Ci sono righe uguali!\n");
+                        continue;
+                    }
 
 
-                int zeros = 0;
-                isredundant = 0;
+                    int zeros = 0;
+                    isredundant = 0;
 
-                for (x = 0; x < ROWSIZE - 1; x++) {
-                    if (mpz_cmp_ui(*(matrix + i * ROWSIZE + x), 0) != 0) {
-                        if (mpz_invert(invers, *(matrix + i * ROWSIZE + x), pm1) == 0) {
-                            isredundant = 1;
+                    for (x = 0; x < ROWSIZE - 1; x++) {
+                        if (mpz_cmp_ui(*(matrix + i * ROWSIZE + x), 0) != 0) {
+                            if (mpz_invert(invers, *(matrix + i * ROWSIZE + x), pm1) == 0) {
+                                isredundant = 1;
+                            } else {
+                                isredundant = 0;
+                            }
                         } else {
+                            zeros++;
+                        }
+                    }
+
+                    if (zeros == ROWSIZE - 2 && isredundant == 0) {
+                        for (x = 0; x < ROWSIZE; x++) {
+                            mpz_mul(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), invers);
+                            mpz_mod(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), pm1);
                             isredundant = 0;
                         }
                     } else {
-                        zeros++;
+                        isredundant = 1;
                     }
-                }
 
-                if (zeros == ROWSIZE - 2 && isredundant == 0) {
-                    for (x = 0; x < ROWSIZE; x++) {
-                        mpz_mul(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), invers);
-                        mpz_mod(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), pm1);
-                        isredundant = 0;
+                    if (isredundant == 1) {
+                        printf("E' una riga inutile!\n");
+                        continue;
                     }
-                } else {
-                    isredundant = 1;
-                }
 
-                if (isredundant == 1) {
-                    continue;
-                }
+                    equals = 0;
+                    isredundant = 0;
 
-                equals = 0;
-                isredundant = 0;
-
-                if (i > 0) {
-                    for (l = i - 1; l >= 0; l--) {
-                        for (j = 0; j < primelist->count; j++) {
-                            if (mpz_cmp(*(matrix + i * ROWSIZE + j), *(matrix + l * ROWSIZE + j)) == 0) {
-                                equals++;
-                                if (equals == primelist->count) {
-                                    isredundant = 1;
+                    if (i > 0) {
+                        for (l = i - 1; l >= 0; l--) {
+                            for (j = 0; j < primelist->count; j++) {
+                                if (mpz_cmp(*(matrix + i * ROWSIZE + j), *(matrix + l * ROWSIZE + j)) == 0) {
+                                    equals++;
+                                    if (equals == primelist->count) {
+                                        isredundant = 1;
+                                    }
                                 }
                             }
+                            equals = 0;
                         }
-                        equals = 0;
                     }
-                }
 
-                if (isredundant == 1) {
-                    continue;
-                }
+                    if (isredundant == 1) {
+                        printf("Ci sono ancora righe uguali!\n");
+                        continue;
+                    }
+                    for (k = 0; k < i + 1; k++) {
+                        printf("[ ");
+                        for (j = 0; j < ROWSIZE; j++) {
+                            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+                            printf(" ");
+                        }
+                        printf("]\n");
+                    }
+                    printf("\n");
 
-
-                i++;
-                if (i == RELATIONS) {
-                    break;
+                    i++;
+                    if (i == RELATIONS) {
+                        break;
+                    }
                 }
             }
             if (i == RELATIONS) {
@@ -603,12 +725,11 @@ double main(int argc, char *argv[]) {
     mpz_clear(candidate2);
     mpz_clear(randexp1);
     mpz_clear(randexp2);
-    mpz_clear(randexp);
-    mpz_clear(candidate);
-    mpz_clear(res);
-    mpz_clear(base);
+//    mpz_clear(randexp);
+//    mpz_clear(candidate);
+//    mpz_clear(res);
+//    mpz_clear(base);
 
-    printf("Finito ora stampo\n");
     int j;
 
     for (k = 0; k < primelist->count; k++) {
@@ -620,6 +741,72 @@ double main(int argc, char *argv[]) {
         printf("]\n");
     }
     printf("\n");
+
+
+    for (mpz_set_ui(u, 1); mpz_cmp(u, pm1) <= 0; mpz_add_ui(u, u, 1)) {
+
+        mpz_powm(candidate, am, u, pm);
+        mpz_mul_ui(candidate, candidate, t);
+        mpz_mod(candidate, candidate, pm);
+        mpz_set(res, am);
+
+//        for (s = 0; s < (int) mpz_get_ui(u) - 1; s++) {
+//            mpz_mul(res, res, am);
+//        }
+
+        if (isBsmooth(candidate, Bm) == 1 &&
+            mpz_cmp(candidate, uno) != 0) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
+//            mpz_out_str(stdout, 10, candidate);
+//            printf(" (pari a %llu *", t);
+//            mpz_out_str(stdout, 10, am);
+//            printf(" alla ");
+//            mpz_out_str(stdout, 10, u);
+//            printf(") è %llu-smooth\n", B);
+//            fflush(stdout);
+
+            candidatefactors = factorsbytrialdivision(candidate);
+            printlist(candidatefactors);
+
+            struct element *factor, *prime;
+            mpz_t result;
+            mpz_init_set_ui(result, 0);
+            int pos = 0;
+            int row;
+            int times;
+
+            for (factor = candidatefactors->HEAD; factor != NULL; factor = factor->next) {
+                for (prime = primelist->HEAD; prime != NULL; prime = prime->next) {
+                    if (mpz_cmp(prime->value, factor->value) == 0) {
+                        break;
+                    }
+                    pos++;
+                }
+                for (row = 0; row < primelist->count; row++) {
+//                    printf("Vedo posizione [%d,%d]\n", row, pos);
+                    if (mpz_cmp_ui(*(matrix + row * ROWSIZE + pos), 1) == 0) {
+//                        printf("Trovato un 1 in [%d,%d] per il fattore ", row, pos);
+//                        mpz_out_str(stdout, 10, factor->value);
+//                        printf("\n");
+//                        printf("Il valore corrispondente è: ");
+//                        mpz_out_str(stdout, 10, *(matrix + row * ROWSIZE + ROWSIZE - 1));
+//                        printf("\n");
+                        for (times = 0; times < factor->exp; times++) {
+                            mpz_add(result, result, *(matrix + row * ROWSIZE + ROWSIZE - 1));
+//                            mpz_out_str(stdout, 10, result);
+//                            printf("\n");
+                        }
+                    }
+                }
+                pos = 0;
+            }
+            mpz_sub(result, result, u);
+            mpz_mod(result, result, pm1);
+            printf("Il risultato è: ");
+            mpz_out_str(stdout, 10, result);
+            printf("\n");
+            break;
+        }
+    }
 
 
 //    mpz_invert(invers, *(matrix + (SIZE - 1) * ROWSIZE + (SIZE- 1)), pm1);
