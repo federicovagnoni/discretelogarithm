@@ -186,6 +186,7 @@ void freelist(struct list *list) {
 //    mpz_clear(list->HEAD->value);
     free(list->HEAD);
     free(list);
+    return;
 }
 
 void printlist(struct list *list) {
@@ -215,12 +216,12 @@ void returnlist(struct list *linkedlist, mpz_t *returnedlist) {
 
 struct list *primes_in_range(mpz_t n, mpz_t m) {
     struct list *newlist = init_list();
-    mpz_t i;
-    mpz_t r;
-    mpz_t en;
+    mpz_t i, r, en;
+
     mpz_init_set(en, n);
     mpz_init(r);
     mpz_init(i);
+
     while (mpz_cmp(en, m) <= 0) {
         mpz_set_si(i, 2);
         while (mpz_cmp(i, en) < 0) {
@@ -246,14 +247,9 @@ void trialdivison(mpz_t factor, mpz_t n, struct list *list) {
     mpz_t r;
     mpz_init(r);
     while (temp != NULL) {
-//        printf("n = ");
-//        mpz_out_str(stdout, 10, n);
-//        printf("\ntempvalue = ");
-//        mpz_out_str(stdout, 10, temp->value);
+
         mpz_mod(r, n, temp->value);
-//        printf("\nr = ");
-//        mpz_out_str(stdout, 10, r);
-//        printf("\n");
+
         if (mpz_cmp_ui(r, 0) == 0) {
             mpz_clear(r);
             mpz_set(factor, temp->value);
@@ -262,7 +258,6 @@ void trialdivison(mpz_t factor, mpz_t n, struct list *list) {
         temp = temp->next;
     }
     mpz_clear(r);
-    free(temp);
     mpz_set(factor, n);
     return;
 }
@@ -281,14 +276,13 @@ struct element *addnewfactor(mpz_t value, struct list *list) {
 }
 
 void factorsbytrialdivision(mpz_t n, struct list *list, struct list *primelist) {
-    mpz_t factor;
+
+    mpz_t factor, todivide, uno, root;
+
     mpz_init(factor);
-    mpz_t todivide;
-    mpz_init_set(todivide, n);
-    mpz_t uno;
-    mpz_init_set_ui(uno, 1);
-    mpz_t root;
     mpz_init(root);
+    mpz_init_set(todivide, n);
+    mpz_init_set_ui(uno, 1);
     mpz_sqrt(root, todivide);
 
     while (mpz_cmp_ui(todivide, 1) != 0) {
@@ -305,21 +299,21 @@ void factorsbytrialdivision(mpz_t n, struct list *list, struct list *primelist) 
     return;
 }
 
-struct list *factorsbypollard(mpz_t n, struct list *primelist) {
+struct list *factorsbypollard(mpz_t n) {
+
     struct list *newlist = init_list();
-    mpz_t factor;
+    struct list *primelist;
+    mpz_t factor, todivide, uno, due, mod, root;
+
     mpz_init(factor);
-    mpz_t todivide;
-    mpz_init_set(todivide, n);
-    mpz_t root;
+    mpz_init(mod);
     mpz_init(root);
-    mpz_t uno,due;
+    mpz_init_set(todivide, n);
     mpz_init_set_ui(uno, 1);
     mpz_init_set_ui(due, 2);
-    mpz_t mod;
-    mpz_init(mod);
 
     mpz_mod(mod, todivide, due);
+
     while (mpz_cmp_ui(mod, 0) == 0) {
         mpz_div(todivide, todivide, due);
         addnewfactor(due, newlist);
@@ -334,14 +328,15 @@ struct list *factorsbypollard(mpz_t n, struct list *primelist) {
             addnewfactor(todivide, newlist);
             break;
         }
-
+        mpz_sqrt(root, factor);
+        primelist = primes_in_range(uno, root);
         factorsbytrialdivision(factor, newlist, primelist);
+        freelist(primelist);
         mpz_div(todivide, todivide, factor);
 
     }
     mpz_clear(factor);
     mpz_clear(todivide);
-    mpz_clear(root);
     mpz_clear(mod);
     mpz_clear(uno);
     mpz_clear(due);
@@ -370,39 +365,58 @@ void removeelem(mpz_t value, struct list *list) {
     }
 }
 
-int isBsmooth(mpz_t m, mpz_t B, struct list *primelist) {
+struct list* isBsmooth(mpz_t m, mpz_t B) {
 
-    struct list *list = factorsbypollard(m, primelist);
-
+    struct list *factors = factorsbypollard(m);
+//    printlist(factors);
+//    fflush(stdout);
     struct element *elem;
-    for (elem = list->HEAD; elem != NULL; elem = elem->next) {
+    for (elem = factors->HEAD; elem != NULL; elem = elem->next) {
         if (mpz_cmp(elem->value, B) > 0) {
-            freelist(list);
-            return 0;
+            freelist(factors);
+            return NULL;
         }
     }
-    printlist(list);
-    printf("\n");
-    return 1;
+    return factors;
 }
 
 double main(int argc, char *argv[]) {
 
     unsigned long long p, q, a, B, lp, exponent, t;
-    mpz_t b, e, primo;
-    mpz_init_set_ui(b, 6);
-    mpz_init_set_ui(e, 58756221822);
-    mpz_init_set_ui(primo, 98764321261);
-    mpz_powm(b, b, e, primo);
-
-    mpz_out_str(stdout, 10, b);
+//    mpz_t b, e, primo;
+//    mpz_init_set_ui(b, 6);
+//    mpz_init_set_ui(e, 58756221822);
+//    mpz_init_set_ui(primo, 98764321261);
+//    mpz_powm(b, b, e, primo);
+//    mpz_out_str(stdout, 10, b);
 
     printf("Inserisci il numero da fattorizzare: ");
     scanf("%llu", &q);
     printf("q = %llu\n", q);
 
-    p = 1 + 2 * q;
-    printf("p = %llu\n", p);
+    mpz_t am, pm, pm1, exp, try, qm, uno, due, root, Bm, tm, pm2, logpm, p2m;
+
+    mpz_init(am);
+    mpz_init(exp);
+    mpz_init(try);
+    mpz_init(pm);
+    mpz_init(root);
+    mpz_init(pm1);
+    mpz_init(pm2);
+    mpz_init(logpm);
+    mpz_init(p2m);
+
+    mpz_init_set_ui(qm, q);
+    mpz_init_set_ui(uno, 1);
+    mpz_init_set_ui(due, 2);
+
+    p = 2*q + 1;
+
+    mpz_mul(pm, qm, due);
+    mpz_add(pm, pm, uno);
+    printf("p = ");
+    mpz_out_str(stdout, 10, pm);
+    printf("\n");
 
     exponent = (unsigned long long int) sqrtl(logl(p) * logl(logl(p)));
     printf("exponent = %llu\n", exponent);
@@ -410,37 +424,35 @@ double main(int argc, char *argv[]) {
     printf("L(p) = %llu\n", lp);
     printf("L(p)^c = %.0Lf\n", sqrtl(lp));
     B = (unsigned long long int) ceill(sqrtl(lp));
+
     B = B + B * 3/2;
-
     printf("B = %llu\n", B);
-    mpz_t am, pm, pm1, exp, try, qm, uno, due, root;
-    mpz_init(am);
-    mpz_init(exp);
-    mpz_init(try);
-    mpz_init_set_ui(pm, p);
 
+    mpz_init_set_ui(Bm, B);
 
-    mpz_init_set_ui(qm, q);
-    mpz_init_set_ui(due, 2);
-    mpz_init(pm1);
     mpz_sub_ui(pm1, pm, 1);
-    mpz_init(root);
     mpz_sqrt(root, pm);
-    mpz_init_set_ui(uno, 1);
 
-    printf("Calcolo i primi");
-    fflush(stdout);
-    struct list *primes = primes_in_range(uno, root);
+//    printf("Calcolo i primi...");
+//    fflush(stdout);
+//    struct list *primes = primes_in_range(uno, root);
+//    printf("done\n");
+//    fflush(stdout);
 
     int count = 0;
     struct element *divisor;
-    struct list *divisors = factorsbypollard(pm1, primes); //init_list();
+    printf("Calcolo i divisori...");
+    fflush(stdout);
+    struct list *divisors = factorsbypollard(pm1); //init_list();
+    printf("done\n\n");
+    fflush(stdout);
 
+    printf("p - 1 = ");
     printlist(divisors);
     printf("\n");
     fflush(stdout);
 
-    for (mpz_set_ui(am, 4); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
+    for (mpz_set_ui(am, 1); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
         for (divisor = divisors->HEAD; divisor != NULL; divisor = divisor->next) {
             mpz_div(exp, pm1, divisor->value);
             mpz_powm(try, am, exp, pm);
@@ -460,94 +472,74 @@ double main(int argc, char *argv[]) {
 
     }
 
+    freelist(divisors);
+    free(divisor);
+
 
     printf("Inserisci una radice primitiva (e base del logaritmo): ");
     scanf("%llu", &a);
 
+    mpz_set_ui(am, a);
+
     printf("Inserisci l'argomento del logaritmo: ");
     scanf("%llu", &t);
-    mpz_t Bm, tm;
-    mpz_init_set_ui(Bm, B);
-    mpz_set_ui(am, a);
+
     mpz_init_set_ui(tm, t);
 
     struct list *primelist = primes_in_range(uno, Bm);
 
-    printf("La lista dei primi belli compresi tra 1 e ");
+    printf("Tra 1 e ");
     mpz_out_str(stdout, 10, Bm);
-    printf(" è: ");
-    printlist(primelist);
-    printf("\n");
+    printf(" ci sono %d numeri primi\n", primelist->count);
 
     mpz_t listprime[primelist->count];
     returnlist(primelist, listprime);
 
-    mpz_t pm2, logpm, p2m;
-    mpz_init(pm2);
-    mpz_init(logpm);
+
     mpz_sub_ui(pm2, pm, 2);
-    mpz_init(p2m);
     mpz_mul_ui(p2m, pm, 2);
     mpz_set_ui(logpm, (unsigned long) ceill(log(p)));
 
     int i = 0;
-    mpz_t randexp;
-    srand(time(NULL));
+    int j, l, k, z;
+    int RELATIONS = primelist->count;
+    int ROWSIZE = primelist->count + 1;
 
-    mpz_t candidate;
-    mpz_t res;
+    int isredundant = 0, equals = 0;
+
+    mpz_t candidate, res, u, invers, c, term;
     mpz_init(res);
+    mpz_init(u);
+    mpz_init(invers);
+    mpz_init(candidate);
+    mpz_init(c);
+    mpz_init(term);
 
     struct list *candidatefactors;
-    gmp_randstate_t randstate;
-    gmp_randinit_default(randstate);
-    gmp_randseed_ui(randstate, (unsigned long) time(NULL));
 
-//    struct list *newlist;
     struct element *temp1, *temp2;
 
     mpz_t *matrix = NULL;
-    int l, k, z;
-    mpz_t u;
-    mpz_init(u);
 
-    mpz_t base;
-    mpz_init(base);
-    mpz_init(randexp);
-    mpz_init(candidate);
-    int x, y, s;
-    mpz_t randexp1, randexp2;
-    mpz_t candidate1, candidate2;
-    mpz_init(randexp1);
-    mpz_init(randexp2);
-    mpz_init(candidate1);
-    mpz_init(candidate2);
+    int useless = 0;
 
-    mpz_t temp;
-    mpz_init(temp);
 
-    mpz_t invers;
-    mpz_init(invers);
-
-    int RELATIONS = primelist->count;
-    int ROWSIZE = primelist->count + 1;
-    mpz_t c;
-    mpz_init(c);
-
-    int isredundant = 0, equals = 0;
+    //
+    printf("Calcolo delle %d relazioni...\n", RELATIONS);
     while (i < primelist->count) {
 
         for (mpz_set_ui(u, 1); mpz_cmp(u, pm) < 0; mpz_add_ui(u, u, 1)) {
 
             mpz_powm(candidate, am, u, pm);
-            mpz_pow_ui(res, am, mpz_get_ui(u));
+            if (useless == 0) {
+                mpz_pow_ui(res, am, mpz_get_ui(u));
+                if (mpz_cmp(res, pm) > 0)
+                    useless = 1;
+                    mpz_set_ui(res, 1);
+            }
 
 //            mpz_out_str(stdout, 10, res);
-//            printf("\n");
-//            mpz_out_str(stdout, 10, u);
-//            printf("\n");
-//            fflush(stdout);
-//
+//            printf(" ovvero ");
 //            mpz_out_str(stdout, 10, candidate);
 //            printf(" (pari a ");
 //            mpz_out_str(stdout, 10, am);
@@ -556,10 +548,11 @@ double main(int argc, char *argv[]) {
 //            printf(") in prova\n");
 //            fflush(stdout);
 
-            if (mpz_cmp(res, pm) > 0) {
-//                printf("Vedo se è Bsmooth\n");
-//                fflush(stdout);
-                if (isBsmooth(candidate, Bm, primes) == 1) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
+            if (mpz_cmp(res, pm) > 0 || useless == 1) {
+
+                candidatefactors = isBsmooth(candidate, Bm);
+
+                if (candidatefactors != NULL) {
 
                     mpz_out_str(stdout, 10, candidate);
                     printf(" (pari a ");
@@ -569,11 +562,9 @@ double main(int argc, char *argv[]) {
                     printf(") è %llu-smooth\n", B);
                     fflush(stdout);
 
-                    candidatefactors = factorsbypollard(candidate, primes);
 
                     matrix = realloc(matrix, sizeof(mpz_t) * ROWSIZE * (i + 1));
 
-                    int j;
                     for (j = 0; j < ROWSIZE; j++) {
                         mpz_init_set_ui(*(matrix + i * ROWSIZE + j), 0);
                     }
@@ -593,15 +584,15 @@ double main(int argc, char *argv[]) {
 
                     freelist(candidatefactors);
 
-                    for (k = 0; k < i + 1; k++) {
-                        printf("[ ");
-                        for (j = 0; j < ROWSIZE; j++) {
-                            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
-                            printf(" ");
-                        }
-                        printf("]\n");
-                    }
-                    printf("\n");
+//                    for (k = 0; k < i + 1; k++) {
+//                        printf("[ ");
+//                        for (j = 0; j < ROWSIZE; j++) {
+//                            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+//                            printf(" ");
+//                        }
+//                        printf("]\n");
+//                    }
+//                    printf("\n");
 
                     // Vedo se ci sono righe uguali
                     equals = 0;
@@ -626,12 +617,8 @@ double main(int argc, char *argv[]) {
                         continue;
                     }
 
+
                     //altrimenti effettuo l'eliminazione di Gauss
-
-                    k = 0;
-                    mpz_t term;
-                    mpz_init(term);
-
                     for (k = 0; k < i + 1; k++) {
                         if (mpz_invert(invers, *(matrix + k * ROWSIZE + k), pm1) == 0) {
                             isredundant = 1;
@@ -651,42 +638,10 @@ double main(int argc, char *argv[]) {
                         continue;
                     }
 
-
-
-
-
-//                    int zeros = 0;
-//                    isredundant = 0;
-//
-//                    for (x = 0; x < ROWSIZE - 1; x++) {
-//                        if (mpz_cmp_ui(*(matrix + i * ROWSIZE + x), 0) != 0) {
-//                            if (mpz_invert(invers, *(matrix + i * ROWSIZE + x), pm1) == 0) {
-//                                isredundant = 1;
-//                            } else {
-//                                isredundant = 0;
-//                            }
-//                        } else {
-//                            zeros++;
-//                        }
-//                    }
-//
-//                    if (zeros == ROWSIZE - 2 && isredundant == 0) {
-//                        for (x = 0; x < ROWSIZE; x++) {
-//                            mpz_mul(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), invers);
-//                            mpz_mod(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), pm1);
-//                            isredundant = 0;
-//                        }
-//                    } else {
-//                        isredundant = 1;
-//                    }
-//
-//                    if (isredundant == 1) {
-//                        continue;
-//                    }
-//
                     equals = 0;
                     isredundant = 0;
 
+                    // Se la nuova riga è comunque uguale alle altre, la rimuovo
                     if (i > 0) {
                         for (l = i - 1; l >= 0; l--) {
                             for (j = 0; j < primelist->count; j++) {
@@ -704,15 +659,19 @@ double main(int argc, char *argv[]) {
                     if (isredundant == 1) {
                         continue;
                     }
-                    for (k = 0; k < i + 1; k++) {
-                        printf("[ ");
-                        for (j = 0; j < ROWSIZE; j++) {
-                            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
-                            printf(" ");
-                        }
-                        printf("]\n");
-                    }
-                    printf("\n");
+
+//                    for (k = 0; k < i + 1; k++) {
+//                        printf("[ ");
+//                        for (j = 0; j < ROWSIZE; j++) {
+//                            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+//                            printf(" ");
+//                        }
+//                        printf("]\n");
+//                    }
+//                    printf("\n");
+
+                    printf("%d di %d relazioni trovate\n", i + 1, RELATIONS);
+                    fflush(stdout);
 
                     i++;
 
@@ -730,28 +689,19 @@ double main(int argc, char *argv[]) {
         }
         mpz_set_ui(u, 1);
     }
+    printf("done!\n\n");
 
-    mpz_clear(candidate1);
-    mpz_clear(candidate2);
-    mpz_clear(randexp1);
-    mpz_clear(randexp2);
-//    mpz_clear(randexp);
-//    mpz_clear(candidate);
-//    mpz_clear(res);
-//    mpz_clear(base);
 
-    int j;
 
-    printf("Ho finito\n");
-    for (k = 0; k < primelist->count; k++) {
-        printf("[ ");
-        for (j = 0; j < ROWSIZE; j++) {
-            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
-            printf(" ");
-        }
-        printf("]\n");
-    }
-    printf("\n");
+//    for (k = 0; k < primelist->count; k++) {
+//        printf("[ ");
+//        for (j = 0; j < ROWSIZE; j++) {
+//            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+//            printf(" ");
+//        }
+//        printf("]\n");
+//    }
+//    printf("\n");
 
     mpz_t sol[RELATIONS];
     for (j = 0; j < RELATIONS; j++) {
@@ -766,7 +716,9 @@ double main(int argc, char *argv[]) {
     mpz_init(num);
     mpz_init(denom);
     mpz_init(sum);
+
     /* this loop is for backward substitution*/
+    printf("Calcolo della matrice dei coefficienti...");
     for(i = RELATIONS - 2; i >= 0; i--)
     {
         mpz_set_ui(sum, 0);
@@ -776,19 +728,9 @@ double main(int argc, char *argv[]) {
             // sum = sum + x[j] * *(matrix + i * ROWSIZE + j))
         }
         mpz_invert(denom, *(matrix + i * ROWSIZE + i), pm1);
-        printf("L'inverso di ");
-        mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + i));
-        printf(" è ");
-        mpz_out_str(stdout, 10, denom);
-        printf("\n");
         mpz_sub(num, *(matrix + i * ROWSIZE + RELATIONS), sum);
         mpz_mul(sol[i], num, denom);
         mpz_mod(sol[i], sol[i], pm1);
-    }
-    for (i = 0; i < RELATIONS; i++) {
-        printf("x%d => ", i + 1);
-        mpz_out_str(stdout, 10, sol[i]);
-        printf("\n");
     }
 
     for (k = 0; k < RELATIONS; k++) {
@@ -802,17 +744,24 @@ double main(int argc, char *argv[]) {
         }
     }
 
-    for (k = 0; k < primelist->count; k++) {
-        printf("[ ");
-        for (j = 0; j < ROWSIZE; j++) {
-            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
-            printf(" ");
-        }
-        printf("]\n");
-    }
-    printf("\n");
+    printf("done\n\n");
+    fflush(stdout);
 
+//    for (k = 0; k < primelist->count; k++) {
+//        printf("[ ");
+//        for (j = 0; j < ROWSIZE; j++) {
+//            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+//            printf(" ");
+//        }
+//        printf("]\n");
+//    }
+//    printf("\n");
 
+    mpz_t result;
+    mpz_init(result);
+
+    printf("Calcolo della soluzione...");
+    fflush(stdout);
 
     for (mpz_set_ui(u, 1); mpz_cmp(u, pm1) <= 0; mpz_add_ui(u, u, 1)) {
 
@@ -821,26 +770,12 @@ double main(int argc, char *argv[]) {
         mpz_mod(candidate, candidate, pm);
         mpz_set(res, am);
 
-//        for (s = 0; s < (int) mpz_get_ui(u) - 1; s++) {
-//            mpz_mul(res, res, am);
-//        }
+        candidatefactors = isBsmooth(candidate, Bm);
 
-        if (isBsmooth(candidate, Bm, primes) == 1 &&
-            mpz_cmp(candidate, uno) != 0) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
-//            mpz_out_str(stdout, 10, candidate);
-//            printf(" (pari a %llu *", t);
-//            mpz_out_str(stdout, 10, am);
-//            printf(" alla ");
-//            mpz_out_str(stdout, 10, u);
-//            printf(") è %llu-smooth\n", B);
-//            fflush(stdout);
-
-            candidatefactors  = factorsbypollard(candidate, primes);
-            printlist(candidatefactors);
+        if (candidatefactors != NULL && mpz_cmp(candidate, uno) != 0) {
 
             struct element *factor, *prime;
-            mpz_t result;
-            mpz_init_set_ui(result, 0);
+            mpz_set_ui(result, 0);
             int pos = 0;
             int row;
             int times;
@@ -853,38 +788,24 @@ double main(int argc, char *argv[]) {
                     pos++;
                 }
                 for (row = 0; row < primelist->count; row++) {
-//                    printf("Vedo posizione [%d,%d]\n", row, pos);
                     if (mpz_cmp_ui(*(matrix + row * ROWSIZE + pos), 1) == 0) {
-//                        printf("Trovato un 1 in [%d,%d] per il fattore ", row, pos);
-//                        mpz_out_str(stdout, 10, factor->value);
-//                        printf("\n");
-//                        printf("Il valore corrispondente è: ");
-//                        mpz_out_str(stdout, 10, *(matrix + row * ROWSIZE + ROWSIZE - 1));
-//                        printf("\n");
+
                         for (times = 0; times < factor->exp; times++) {
                             mpz_add(result, result, *(matrix + row * ROWSIZE + ROWSIZE - 1));
-//                            mpz_out_str(stdout, 10, result);
-//                            printf("\n");
+
                         }
                     }
                 }
                 pos = 0;
             }
+            freelist(candidatefactors);
             mpz_sub(result, result, u);
             mpz_mod(result, result, pm1);
-            printf("Il risultato è: ");
+            printf("done\n\nIl risultato è: ");
             mpz_out_str(stdout, 10, result);
-            printf("\n");
             break;
         }
     }
-
-
-
-
-
-    mpz_clear(pm2);
-
 
     return EXIT_SUCCESS;
 }
