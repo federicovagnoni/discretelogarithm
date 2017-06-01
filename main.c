@@ -138,37 +138,36 @@ void addelem(mpz_t value, struct list *list) {
     list->count++;
 };
 
-struct element *addorderelem(mpz_t value, struct list *list) {
-    struct element *elem = init_elem(value);
-    struct element *temp;
-    for (temp = list->HEAD; temp != NULL; temp = temp->next) {
-        if (mpz_cmp(value, temp->value) > 0) {
-            if (temp->next != NULL) {
-                if (mpz_cmp(value, temp->next->value) < 0) {
-                    temp->next = elem;
-                    elem->prev = temp;
-                    elem->next = temp->next;
-                    temp->next->prev = elem;
-                    list->count++;
-                    return elem;
-                }
-            } else {
-                list->TAIL = elem;
-                list->TAIL->prev = temp;
-                temp->next = elem;
-                list->count++;
-                return elem;
-            }
-        }
-    }
-    if (list->HEAD == NULL) {
-        list->HEAD = elem;
-        list->TAIL = elem;
-        list->count++;
-        return elem;
-    }
-
-}
+//struct element *addorderelem(mpz_t value, struct list *list) {
+//    struct element *elem = init_elem(value);
+//    struct element *temp;
+//    for (temp = list->HEAD; temp != NULL; temp = temp->next) {
+//        if (mpz_cmp(value, temp->value) > 0) {
+//            if (temp->next != NULL) {
+//                if (mpz_cmp(value, temp->next->value) < 0) {
+//                    temp->next = elem;
+//                    elem->prev = temp;
+//                    elem->next = temp->next;
+//                    temp->next->prev = elem;
+//                    list->count++;
+//                    return elem;
+//                }
+//            } else {
+//                list->TAIL = elem;
+//                list->TAIL->prev = temp;
+//                temp->next = elem;
+//                list->count++;
+//                return elem;
+//            }
+//        }
+//    }
+//    if (list->HEAD == NULL) {
+//        list->HEAD = elem;
+//        list->TAIL = elem;
+//        list->count++;
+//        return elem;
+//    }
+//}
 
 void freelist(struct list *list) {
     struct element *temp = NULL;
@@ -281,18 +280,16 @@ struct element *addnewfactor(mpz_t value, struct list *list) {
     return list->TAIL;
 }
 
-void factorsbytrialdivision(mpz_t n, struct list *list) {
+void factorsbytrialdivision(mpz_t n, struct list *list, struct list *primelist) {
     mpz_t factor;
     mpz_init(factor);
     mpz_t todivide;
     mpz_init_set(todivide, n);
-    struct list *primelist;
     mpz_t uno;
     mpz_init_set_ui(uno, 1);
     mpz_t root;
     mpz_init(root);
     mpz_sqrt(root, todivide);
-    primelist = primes_in_range(uno, root);
 
     while (mpz_cmp_ui(todivide, 1) != 0) {
         trialdivison(factor, todivide, primelist);
@@ -302,14 +299,13 @@ void factorsbytrialdivision(mpz_t n, struct list *list) {
         addnewfactor(factor, list);
         mpz_div(todivide, todivide, factor);
     }
-    freelist(primelist);
     mpz_clear(factor);
     mpz_clear(todivide);
     mpz_clear(root);
     return;
 }
 
-struct list *factorsbypollard(mpz_t n) {
+struct list *factorsbypollard(mpz_t n, struct list *primelist) {
     struct list *newlist = init_list();
     mpz_t factor;
     mpz_init(factor);
@@ -339,7 +335,7 @@ struct list *factorsbypollard(mpz_t n) {
             break;
         }
 
-        factorsbytrialdivision(factor, newlist);
+        factorsbytrialdivision(factor, newlist, primelist);
         mpz_div(todivide, todivide, factor);
 
     }
@@ -374,9 +370,9 @@ void removeelem(mpz_t value, struct list *list) {
     }
 }
 
-int isBsmooth(mpz_t m, mpz_t B) {
+int isBsmooth(mpz_t m, mpz_t B, struct list *primelist) {
 
-    struct list *list = factorsbypollard(m);
+    struct list *list = factorsbypollard(m, primelist);
 
     struct element *elem;
     for (elem = list->HEAD; elem != NULL; elem = elem->next) {
@@ -393,6 +389,13 @@ int isBsmooth(mpz_t m, mpz_t B) {
 double main(int argc, char *argv[]) {
 
     unsigned long long p, q, a, B, lp, exponent, t;
+    mpz_t b, e, primo;
+    mpz_init_set_ui(b, 6);
+    mpz_init_set_ui(e, 58756221822);
+    mpz_init_set_ui(primo, 98764321261);
+    mpz_powm(b, b, e, primo);
+
+    mpz_out_str(stdout, 10, b);
 
     printf("Inserisci il numero da fattorizzare: ");
     scanf("%llu", &q);
@@ -410,27 +413,36 @@ double main(int argc, char *argv[]) {
     B = B + B * 3/2;
 
     printf("B = %llu\n", B);
-    mpz_t am, pm, pm1, exp, try, qm, due;
+    mpz_t am, pm, pm1, exp, try, qm, uno, due, root;
     mpz_init(am);
     mpz_init(exp);
     mpz_init(try);
     mpz_init_set_ui(pm, p);
+
+
     mpz_init_set_ui(qm, q);
     mpz_init_set_ui(due, 2);
     mpz_init(pm1);
     mpz_sub_ui(pm1, pm, 1);
+    mpz_init(root);
+    mpz_sqrt(root, pm);
+    mpz_init_set_ui(uno, 1);
+
+    printf("Calcolo i primi");
+    fflush(stdout);
+    struct list *primes = primes_in_range(uno, root);
 
     int count = 0;
     struct element *divisor;
-    struct list *divisors = factorsbypollard(pm1); //init_list();
-//    addnewfactor(qm, divisors);
-//    addnewfactor(due, divisors);
+    struct list *divisors = factorsbypollard(pm1, primes); //init_list();
 
-//    printlist(divisors);
+    printlist(divisors);
+    printf("\n");
+    fflush(stdout);
 
-    for (mpz_set_ui(am, 2); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
+    for (mpz_set_ui(am, 4); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
         for (divisor = divisors->HEAD; divisor != NULL; divisor = divisor->next) {
-            mpz_div(exp, pm1, divisor);
+            mpz_div(exp, pm1, divisor->value);
             mpz_powm(try, am, exp, pm);
             if (mpz_cmp_ui(try, 1) == 0) {
                 break;
@@ -441,7 +453,7 @@ double main(int argc, char *argv[]) {
         if (count == divisors->count) {
             mpz_out_str(stdout, 10, am);
             printf(" è una radice primitiva\n");
-//            break;
+            break;
         } else {
             count = 0;
         }
@@ -459,8 +471,6 @@ double main(int argc, char *argv[]) {
     mpz_set_ui(am, a);
     mpz_init_set_ui(tm, t);
 
-    mpz_t uno;
-    mpz_init_set_ui(uno, 1);
     struct list *primelist = primes_in_range(uno, Bm);
 
     printf("La lista dei primi belli compresi tra 1 e ");
@@ -500,6 +510,7 @@ double main(int argc, char *argv[]) {
     int l, k, z;
     mpz_t u;
     mpz_init(u);
+
     mpz_t base;
     mpz_init(base);
     mpz_init(randexp);
@@ -548,7 +559,7 @@ double main(int argc, char *argv[]) {
             if (mpz_cmp(res, pm) > 0) {
 //                printf("Vedo se è Bsmooth\n");
 //                fflush(stdout);
-                if (isBsmooth(candidate, Bm) == 1) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
+                if (isBsmooth(candidate, Bm, primes) == 1) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
 
                     mpz_out_str(stdout, 10, candidate);
                     printf(" (pari a ");
@@ -558,7 +569,7 @@ double main(int argc, char *argv[]) {
                     printf(") è %llu-smooth\n", B);
                     fflush(stdout);
 
-                    candidatefactors = factorsbypollard(candidate);
+                    candidatefactors = factorsbypollard(candidate, primes);
 
                     matrix = realloc(matrix, sizeof(mpz_t) * ROWSIZE * (i + 1));
 
@@ -581,6 +592,16 @@ double main(int argc, char *argv[]) {
                     mpz_set(*(matrix + i * ROWSIZE + ROWSIZE - 1), u);
 
                     freelist(candidatefactors);
+
+                    for (k = 0; k < i + 1; k++) {
+                        printf("[ ");
+                        for (j = 0; j < ROWSIZE; j++) {
+                            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+                            printf(" ");
+                        }
+                        printf("]\n");
+                    }
+                    printf("\n");
 
                     // Vedo se ci sono righe uguali
                     equals = 0;
@@ -605,36 +626,64 @@ double main(int argc, char *argv[]) {
                         continue;
                     }
 
+                    //altrimenti effettuo l'eliminazione di Gauss
 
-                    int zeros = 0;
-                    isredundant = 0;
+                    k = 0;
+                    mpz_t term;
+                    mpz_init(term);
 
-                    for (x = 0; x < ROWSIZE - 1; x++) {
-                        if (mpz_cmp_ui(*(matrix + i * ROWSIZE + x), 0) != 0) {
-                            if (mpz_invert(invers, *(matrix + i * ROWSIZE + x), pm1) == 0) {
-                                isredundant = 1;
-                            } else {
-                                isredundant = 0;
+                    for (k = 0; k < i + 1; k++) {
+                        if (mpz_invert(invers, *(matrix + k * ROWSIZE + k), pm1) == 0) {
+                            isredundant = 1;
+                            break;
+                        }
+                        for (z = k + 1; z < i + 1; z++) {
+                            mpz_mul(c, *(matrix + z * ROWSIZE + k), invers);
+                            for (l = 0; l < ROWSIZE; l++) {
+                                mpz_mul(term, c, *(matrix + k * ROWSIZE + l));
+                                mpz_sub(*(matrix + z * ROWSIZE + l), *(matrix + z * ROWSIZE + l), term);
+                                mpz_mod(*(matrix + z * ROWSIZE + l), *(matrix + z * ROWSIZE + l), pm1);
                             }
-                        } else {
-                            zeros++;
                         }
-                    }
-
-                    if (zeros == ROWSIZE - 2 && isredundant == 0) {
-                        for (x = 0; x < ROWSIZE; x++) {
-                            mpz_mul(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), invers);
-                            mpz_mod(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), pm1);
-                            isredundant = 0;
-                        }
-                    } else {
-                        isredundant = 1;
                     }
 
                     if (isredundant == 1) {
                         continue;
                     }
 
+
+
+
+
+//                    int zeros = 0;
+//                    isredundant = 0;
+//
+//                    for (x = 0; x < ROWSIZE - 1; x++) {
+//                        if (mpz_cmp_ui(*(matrix + i * ROWSIZE + x), 0) != 0) {
+//                            if (mpz_invert(invers, *(matrix + i * ROWSIZE + x), pm1) == 0) {
+//                                isredundant = 1;
+//                            } else {
+//                                isredundant = 0;
+//                            }
+//                        } else {
+//                            zeros++;
+//                        }
+//                    }
+//
+//                    if (zeros == ROWSIZE - 2 && isredundant == 0) {
+//                        for (x = 0; x < ROWSIZE; x++) {
+//                            mpz_mul(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), invers);
+//                            mpz_mod(*(matrix + i * ROWSIZE + x), *(matrix + i * ROWSIZE + x), pm1);
+//                            isredundant = 0;
+//                        }
+//                    } else {
+//                        isredundant = 1;
+//                    }
+//
+//                    if (isredundant == 1) {
+//                        continue;
+//                    }
+//
                     equals = 0;
                     isredundant = 0;
 
@@ -666,7 +715,7 @@ double main(int argc, char *argv[]) {
                     printf("\n");
 
                     i++;
-                    mpz_set_ui(u, 0);
+
                     if (i == RELATIONS) {
                         break;
                     }
@@ -679,6 +728,7 @@ double main(int argc, char *argv[]) {
         if (i == RELATIONS) {
             break;
         }
+        mpz_set_ui(u, 1);
     }
 
     mpz_clear(candidate1);
@@ -692,6 +742,7 @@ double main(int argc, char *argv[]) {
 
     int j;
 
+    printf("Ho finito\n");
     for (k = 0; k < primelist->count; k++) {
         printf("[ ");
         for (j = 0; j < ROWSIZE; j++) {
@@ -701,6 +752,66 @@ double main(int argc, char *argv[]) {
         printf("]\n");
     }
     printf("\n");
+
+    mpz_t sol[RELATIONS];
+    for (j = 0; j < RELATIONS; j++) {
+        mpz_init(sol[j]);
+    }
+
+    mpz_invert(invers, *(matrix + (RELATIONS - 1) * ROWSIZE + (RELATIONS - 1)), pm1);
+    mpz_mul(sol[RELATIONS - 1], *(matrix + (RELATIONS - 1) * ROWSIZE + RELATIONS), invers);
+    mpz_mod(sol[RELATIONS - 1], sol[RELATIONS - 1], pm1);
+
+    mpz_t sum, num, denom;
+    mpz_init(num);
+    mpz_init(denom);
+    mpz_init(sum);
+    /* this loop is for backward substitution*/
+    for(i = RELATIONS - 2; i >= 0; i--)
+    {
+        mpz_set_ui(sum, 0);
+        for(j = i + 1; j < RELATIONS; j++)
+        {
+            mpz_addmul(sum, sol[j], *(matrix + i * ROWSIZE + j));
+            // sum = sum + x[j] * *(matrix + i * ROWSIZE + j))
+        }
+        mpz_invert(denom, *(matrix + i * ROWSIZE + i), pm1);
+        printf("L'inverso di ");
+        mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + i));
+        printf(" è ");
+        mpz_out_str(stdout, 10, denom);
+        printf("\n");
+        mpz_sub(num, *(matrix + i * ROWSIZE + RELATIONS), sum);
+        mpz_mul(sol[i], num, denom);
+        mpz_mod(sol[i], sol[i], pm1);
+    }
+    for (i = 0; i < RELATIONS; i++) {
+        printf("x%d => ", i + 1);
+        mpz_out_str(stdout, 10, sol[i]);
+        printf("\n");
+    }
+
+    for (k = 0; k < RELATIONS; k++) {
+        for (j = 0; j < RELATIONS; j++) {
+            if (k == j) {
+                mpz_set_ui(*(matrix + k * ROWSIZE + j), 1);
+                mpz_set(*(matrix + k * ROWSIZE + ROWSIZE - 1), sol[k]);
+            } else {
+                mpz_set_ui(*(matrix + k * ROWSIZE + j), 0);
+            }
+        }
+    }
+
+    for (k = 0; k < primelist->count; k++) {
+        printf("[ ");
+        for (j = 0; j < ROWSIZE; j++) {
+            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+            printf(" ");
+        }
+        printf("]\n");
+    }
+    printf("\n");
+
 
 
     for (mpz_set_ui(u, 1); mpz_cmp(u, pm1) <= 0; mpz_add_ui(u, u, 1)) {
@@ -714,7 +825,7 @@ double main(int argc, char *argv[]) {
 //            mpz_mul(res, res, am);
 //        }
 
-        if (isBsmooth(candidate, Bm) == 1 &&
+        if (isBsmooth(candidate, Bm, primes) == 1 &&
             mpz_cmp(candidate, uno) != 0) { //&& mpz_cmp(res, pm) > 0) {// && mpz_cmp(res, p2m) < 0) {
 //            mpz_out_str(stdout, 10, candidate);
 //            printf(" (pari a %llu *", t);
@@ -724,7 +835,7 @@ double main(int argc, char *argv[]) {
 //            printf(") è %llu-smooth\n", B);
 //            fflush(stdout);
 
-            candidatefactors  = factorsbypollard(candidate);
+            candidatefactors  = factorsbypollard(candidate, primes);
             printlist(candidatefactors);
 
             struct element *factor, *prime;
@@ -769,28 +880,7 @@ double main(int argc, char *argv[]) {
     }
 
 
-//    mpz_invert(invers, *(matrix + (SIZE - 1) * ROWSIZE + (SIZE- 1)), pm1);
-//    mpz_mul(sol[SIZE], *(matrix + (SIZE - 1) * ROWSIZE + (SIZE)), invers);
-//
-//    mpz_t sum, num, denom;
-//    mpz_init(num);
-//    mpz_init(denom);
-//    mpz_init_set_ui(sum ,0);
-//    /* this loop is for backward substitution*/
-//    for(i = SIZE; i > 0; i--)
-//    {
-//        mpz_set(sum, *(matrix + i * ROWSIZE + SIZE));
-//        for(j = i+1; j < SIZE; j++)
-//        {
-//            mpz_submul(sum, sol[j],*(matrix + i * ROWSIZE + j));
-//            // sum = sum - x[j] * *(matrix + i * ROWSIZE + j))
-//        }
-//        mpz_invert(denom, *(matrix + i * ROWSIZE + i), pm1);
-//        mpz_sub(num, *(matrix + i * ROWSIZE + SIZE), sum);
-//        mpz_mul(sol[i], num, denom);
-//        printf("\n x%d =>", i+1);
-//        mpz_out_str(stdout,10,sol[i]);
-//    }
+
 
 
     mpz_clear(pm2);
