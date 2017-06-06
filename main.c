@@ -398,40 +398,25 @@ struct list *isBsmooth2(mpz_t n, mpz_t B) {
 
     mpz_mod(mod, todivide, due);
 
-//    printf("Fattorizziamo ");
-//    mpz_out_str(stdout, 10, todivide);
-//    printf("\n");
     while (mpz_cmp_ui(mod, 0) == 0) {
-//        printf("lo divido per 2\n");
         mpz_div(todivide, todivide, due);
         addnewfactor(due, newlist);
         mpz_mod(mod, todivide, due);
     }
-//    printf("Ora ho ");
-//    mpz_out_str(stdout, 10, todivide);
-//    printf("\n");
-    while (mpz_cmp_ui(todivide, 1) != 0) {
+
+    mpz_clear(mod);
+    mpz_clear(due);
+
+    while (mpz_cmp(todivide, uno) != 0) {
 
         pollard_rho_opt(factor, todivide, B);
 
-//        printf("Trovo un fattore\n");
 
         if (mpz_cmp_si(factor, -1) == 0){
-//            printf("E' pari al numero di partenza, perciò sarà primo\n");
             if (mpz_cmp(todivide, B) > 0) {
-
-//                printf("Ma ");
-//                mpz_out_str(stdout, 10, todivide);
-//                printf(" però è maggiore di B = ");
-//                mpz_out_str(stdout, 10, B);
-//                printf("\n");
-
                 mpz_clear(factor);
                 mpz_clear(todivide);
-                mpz_clear(mod);
                 mpz_clear(uno);
-                mpz_clear(due);
-//                mpz_clear(root);
                 freelist(newlist);
                 return NULL;
             }
@@ -440,12 +425,9 @@ struct list *isBsmooth2(mpz_t n, mpz_t B) {
         }
 
         if(mpz_cmp_si(factor, -2) == 0) {
-//            printf("Sono passati troppi cicli, perciò NON sarà B-smooth\n");
             mpz_clear(factor);
             mpz_clear(todivide);
-            mpz_clear(mod);
             mpz_clear(uno);
-            mpz_clear(due);
             freelist(newlist);
             return NULL;
         }
@@ -461,23 +443,18 @@ struct list *isBsmooth2(mpz_t n, mpz_t B) {
             if (mpz_cmp(elem->value, B) > 0) {
                 mpz_clear(factor);
                 mpz_clear(todivide);
-                mpz_clear(mod);
                 mpz_clear(uno);
-                mpz_clear(due);
                 freelist(newlist);
                 return NULL;
             }
         }
 
         mpz_div(todivide, todivide, factor);
-//        printf(" e va tutto bene\n");
 
     }
     mpz_clear(factor);
     mpz_clear(todivide);
-    mpz_clear(mod);
     mpz_clear(uno);
-    mpz_clear(due);
     return newlist;
 }
 
@@ -501,9 +478,9 @@ double main(int argc, char *argv[]) {
 
     unsigned long long p, q, a, B, lp, exponent, t;
     mpz_t b, e, primo;
-    mpz_init_set_ui(b, 7);
-    mpz_init_set_ui(e, 1836474861);
-    mpz_init_set_ui(primo, 2147483647);
+    mpz_init_set_ui(b, 6);
+    mpz_init_set_ui(e, 25257826019);
+    mpz_init_set_ui(primo, 98764321261);
     mpz_powm(b, b, e, primo);
     mpz_out_str(stdout, 10, b);
 
@@ -543,7 +520,7 @@ double main(int argc, char *argv[]) {
     printf("L(p)^c = %.0Lf\n", sqrtl(lp));
     B = (unsigned long long int) ceill(sqrtl(lp));
 
-//    B = B + B * 3/2;
+    B = B * 1/2;
     printf("B = %llu\n", B);
 
     mpz_init_set_ui(Bm, B);
@@ -568,7 +545,7 @@ double main(int argc, char *argv[]) {
     fflush(stdout);
 
     // Find a primitive root for Z_{p} (valid for p prime!)
-    for (mpz_set_ui(am, 2); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
+    for (mpz_set_ui(am, 3); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
         for (divisor = divisors->HEAD; divisor != NULL; divisor = divisor->next) {
             mpz_div(exp, pm1, divisor->value);
             mpz_powm(try, am, exp, pm);
@@ -642,7 +619,7 @@ double main(int argc, char *argv[]) {
 
     // While there are not enough relations
     printf("Calcolo delle %d relazioni...\n", RELATIONS);
-    while (i < primelist->count) {
+    while (i < RELATIONS) {
 
         // Find sequentially (or randomly) a relation by trying an exponent
         for (mpz_set_ui(u, 1); mpz_cmp(u, pm) < 0; mpz_add_ui(u, u, 1)) {
@@ -661,6 +638,7 @@ double main(int argc, char *argv[]) {
                 if (mpz_cmp(res, pm) > 0) {
                     useless = 1;
                     mpz_clear(res);
+                    mpz_init_set_ui(res, 1);
                 }
             }
 
@@ -769,8 +747,16 @@ double main(int argc, char *argv[]) {
                         continue;
                     }
 
+//                    printf("[ ");
+//                    for (j = 0; j < ROWSIZE; j++) {
+//                        mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + j));
+//                        printf(" ");
+//                    }
+//                    printf("]\n");
+//                    printf("\n");
 
-                    // If it's not redundat Ican proceed with the Gauss elimination
+
+                    // If it's not redundat I can proceed with the Gauss elimination
 
                     for (k = 0; k < i + 1; k++) {
                         // if the coefficient in the position [k, k] is not invertible that then row is useless
@@ -788,10 +774,21 @@ double main(int argc, char *argv[]) {
                         }
                     }
 
+//                        printf("[ ");
+//                        for (j = 0; j < ROWSIZE; j++) {
+//                            mpz_out_str(stdout, 10, *(matrix + i * ROWSIZE + j));
+//                            printf(" ");
+//                        }
+//                        printf("]\n");
+//                    printf("\n");
+
                     if (isredundant == 1) {
-//                        free(matrix + i *ROWSIZE);
+                        for (j = 0; j < ROWSIZE; j++) {
+                            mpz_clear(*(matrix + i * ROWSIZE + j));
+                        }
                         continue;
                     }
+
 
                     equals = 0;
                     isredundant = 0;
@@ -851,6 +848,7 @@ double main(int argc, char *argv[]) {
     printf("done!\n\n");
 
 
+//    gmp_randclear(rand);
 
 //    for (k = 0; k < primelist->count; k++) {
 //        printf("[ ");
@@ -908,7 +906,7 @@ double main(int argc, char *argv[]) {
     printf("done\n\n");
     fflush(stdout);
 
-    for (k = 0; k < primelist->count; k++) {
+    for (k = 0; k < RELATIONS; k++) {
         printf("[ ");
         for (j = 0; j < ROWSIZE; j++) {
             mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
@@ -921,6 +919,11 @@ double main(int argc, char *argv[]) {
     mpz_t result;
     mpz_init(result);
 
+
+    struct element *factor, *prime;
+    int pos;
+    int row;
+    int times;
 
     // I have the complete matrix of coefficient
     // Now I have to multiplicate the argument of the logarithm with a random power of the primitive root
@@ -939,12 +942,9 @@ double main(int argc, char *argv[]) {
 
         if (candidatefactors != NULL && mpz_cmp(candidate, uno) != 0) {
 
-            struct element *factor, *prime;
             mpz_set_ui(result, 0);
-            int pos = 0;
-            int row;
-            int times;
 
+            pos = 0;
             // for every factor of the number obtained
             for (factor = candidatefactors->HEAD; factor != NULL; factor = factor->next) {
                 // for every prime in the factor base
