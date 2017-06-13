@@ -9,3 +9,5 @@ add_compile_options(O2)
 
 target_link_libraries(discretelogarithms m)
 target_link_libraries(discretelogarithms gmp)
+target_link_libraries(discretelogarithms mpfr)
+target_link_libraries(discretelogarithms pthread)
