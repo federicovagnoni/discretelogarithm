@@ -872,7 +872,7 @@ double main(int argc, char *argv[]) {
     mpfr_init(mpfrlp);
     mpfr_rnd_t rnd;
     mpfr_set_default_rounding_mode(rnd);
-    mpfr_init_set_ui(tre, 2, rnd);
+    mpfr_init_set_ui(tre, 3, rnd);
     mpfr_set_z(mpfrpm, pm, rnd);
     mpfr_log(logpm, mpfrpm, rnd);
     mpfr_t loglogpm, product;
@@ -1122,15 +1122,15 @@ double main(int argc, char *argv[]) {
         }
 
 
-        for (k = 0; k < RELATIONS; k++) {
-            printf("[ ");
-            for (j = 0; j < ROWSIZE; j++) {
-                mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
-                printf(" ");
-            }
-            printf("]\n");
-        }
-        printf("\n");
+//        for (k = 0; k < RELATIONS; k++) {
+//            printf("[ ");
+//            for (j = 0; j < ROWSIZE; j++) {
+//                mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+//                printf(" ");
+//            }
+//            printf("]\n");
+//        }
+//        printf("\n");
 
         break;
     }
@@ -1208,8 +1208,8 @@ double main(int argc, char *argv[]) {
     for (k = 0; k < RELATIONS; k++) {
         mpz_init(value);
         mpz_powm(value, am, *(matrix + k * ROWSIZE + ROWSIZE - 1), pm);
-        mpz_out_str(stdout, 10, value);
-        printf("\n");
+//        mpz_out_str(stdout, 10, value);
+//        printf("\n");
         if (mpz_cmp(value, listprime[k]) != 0) {
             mpz_add(*(matrix + k * ROWSIZE + ROWSIZE - 1), *(matrix + k * ROWSIZE + ROWSIZE - 1), qm);
         }
@@ -1217,15 +1217,15 @@ double main(int argc, char *argv[]) {
 
     }
 
-    for (k = 0; k < RELATIONS; k++) {
-        printf("[ ");
-        for (j = 0; j < ROWSIZE; j++) {
-            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
-            printf(" ");
-        }
-        printf("]\n");
-    }
-    printf("\n");
+//    for (k = 0; k < RELATIONS; k++) {
+//        printf("[ ");
+//        for (j = 0; j < ROWSIZE; j++) {
+//            mpz_out_str(stdout, 10, *(matrix + k * ROWSIZE + j));
+//            printf(" ");
+//        }
+//        printf("]\n");
+//    }
+//    printf("\n");
 
 
     mpz_t result;
