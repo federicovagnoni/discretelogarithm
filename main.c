@@ -6,6 +6,10 @@
 #include <mpfr.h>
 #include <pthread.h>
 
+int limitnum = 2;
+int limitdenom = 1;
+float denom = 4.2;
+
 struct element {
     mpz_t value;
     int exp;
@@ -84,118 +88,74 @@ void choose_seed(mpz_t x, mpz_t y, mpz_t a, mpz_t n, gmp_randstate_t *randstate)
     mpz_urandomm(a, *randstate, n);
 }
 
-void pollard_rho(mpz_t factor, mpz_t n) {
-    mpz_t x, y, d, sub, a;
-    mpz_init(sub);
-    mpz_init(a);
-    mpz_init_set_ui(x, 1);
-    mpz_init_set_ui(y, 1);
-    mpz_init_set_ui(d, 1);
-    gmp_randstate_t randstate;
-    gmp_randinit_mt(randstate);
-    gmp_randseed_ui(randstate, (unsigned long) time(NULL));
-    choose_seed(x, y, a, n, &randstate);
 
-    while (mpz_cmp_ui(d, 1) == 0) {
-        g(x, x, a, n);
-        //printf("x = %.0lf\n", x);
-        g(y, y, a, n);
-        g(y, y, a, n);
-        //printf("y = %.0lf\n", y);
-        mpz_sub(sub, x, y);
-        mpz_abs(sub, sub);
-        mpz_gcd(d, sub, n);
-        //printf("d = %.0lf\n", d);
-        if (mpz_cmp(d, n) == 0) {
-            mpz_clear(x);
-            mpz_clear(y);
-            mpz_clear(d);
-            mpz_clear(sub);
-            mpz_set_si(factor, -1);
-            return;
-        }
-        if (mpz_cmp_ui(d, 1) == 0) {
-            continue;
-        }
-    }
-    mpz_set(factor, d);
-    mpz_clear(x);
-    mpz_clear(y);
-    mpz_clear(d);
-    mpz_clear(sub);
-    return;
-}
-
-
-void pollard_rho_opt(mpz_t factor, mpz_t n, mpz_t B) {
-    mpz_t x, y, a, value, gcd, counter, root;
-    mpz_init_set_ui(x, 2);
-    mpz_init_set_ui(y, 2);
+void pollard_rho_opt(mpz_t factor, mpz_t n, mpz_t B, mpz_t x, mpz_t y) {
+    mpz_t a, value, gcd, counter, limit, prod;
     mpz_init_set_ui(a, 1);
     mpz_init(value);
     mpz_init(gcd);
     mpz_init_set_ui(counter, 0);
-    mpz_init(root);
-    mpz_sqrt(root, B);
+    mpz_init(limit);
+    mpz_sqrt(limit, B);
+    mpz_init_set_ui(prod, 1);
+//    printf("Radice di B = ");
+//    mpz_out_str(stdout, 10, root);
+//    printf("\n");
 //    mpz_div_ui(root, B, 3);
 //    mpz_mul_ui(root, root, 1);
-    mpz_mul_ui(root, root, 3);
+    mpz_mul_ui(limit, limit, (unsigned long) limitnum);
+    mpz_div_ui(limit, limit, (unsigned long) limitdenom);
 
-//    gmp_randstate_t randstate;
-//    gmp_randinit_mt(randstate);
-//    gmp_randseed_ui(randstate, (unsigned long) time(NULL));
-
-//    choose_seed(x, y, a, n, &randstate);
-
-    while (1 == 1) {
+    while (mpz_cmp_ui(counter, 100) > 0) {
         g(x, x, a, n);
         g(y, y, a, n);
         g(y, y, a, n);
         mpz_sub(value, x, y);
         mpz_abs(value, value);
-        mpz_gcd(gcd, value, n);
-        if (mpz_cmp_ui(gcd, 1) == 0) {
-            if (mpz_cmp(counter, root) == 0) {
-//                printf("Guarda tanto non è Bsmooth...\n");
-//                fflush(stdout);
-                mpz_set_si(factor, -2);
-                mpz_clear(x);
-                mpz_clear(y);
-                mpz_clear(a);
-                mpz_clear(value);
-                mpz_clear(gcd);
-                mpz_clear(counter);
-                mpz_clear(root);
-//                gmp_randclear(randstate);
-                return;
-            }
-            mpz_add_ui(counter, counter, 1);
-//            choose_seed(x, y, a, n, &randstate);
-            continue;
-        }
-        if (mpz_cmp(gcd, n) == 0) {
-            mpz_set(factor, n);
-            mpz_clear(x);
-            mpz_clear(y);
-            mpz_clear(a);
-            mpz_clear(value);
-            mpz_clear(gcd);
-            mpz_clear(counter);
-            mpz_clear(root);
-//            gmp_randclear(randstate);
-            return;
-        }
-        mpz_set(factor, gcd);
-        mpz_clear(x);
-        mpz_clear(y);
+        mpz_mul(prod, prod, value);
+        mpz_add_ui(counter, counter, 1);
+    }
+
+    mpz_gcd(gcd, value, n);
+
+
+//    if (mpz_cmp_ui(gcd, 1) == 0) {
+////            if (mpz_cmp(counter, limit) > 0) {
+//////                printf("Guarda tanto non è Bsmooth...\n");
+//////                fflush(stdout);
+////                mpz_set_si(factor, -1);
+////                mpz_clear(a);
+////                mpz_clear(value);
+////                mpz_clear(gcd);
+////                mpz_clear(counter);
+////                mpz_clear(limit);
+////                return;
+////            }
+////            mpz_add_ui(counter, counter, 1);
+////            choose_seed(x, y, a, n, &randstate);
+//    }
+    if (mpz_cmp(gcd, n) == 0) {
+        mpz_set(factor, n);
         mpz_clear(a);
         mpz_clear(value);
         mpz_clear(gcd);
         mpz_clear(counter);
-        mpz_clear(root);
-//        gmp_randclear(randstate);
+        mpz_clear(limit);
+        mpz_clear(prod);
         return;
     }
+//        printf("Fattore trovato dopo ");
+//        mpz_out_str(stdout, 10, counter);
+//        printf(" tentativi\n");
+//        fflush(stdout);
+    mpz_set(factor, gcd);
+    mpz_clear(a);
+    mpz_clear(value);
+    mpz_clear(gcd);
+    mpz_clear(counter);
+    mpz_clear(limit);
+    mpz_clear(prod);
+    return;
 }
 
 
@@ -325,19 +285,23 @@ void trialdivision(mpz_t factor, mpz_t n, struct list *primelist) {
 
     struct element *temp = primelist->HEAD;
 
-    mpz_t r;
+    mpz_t r, root;
     mpz_init(r);
+    mpz_init(root);
+    mpz_sqrt(root, n);
 
-    while (temp != NULL) {
+    while (temp != NULL && mpz_cmp(temp->value, root) <= 0) {
         mpz_mod(r, n, temp->value);
         if (mpz_cmp_ui(r, 0) == 0) {
             mpz_clear(r);
+            mpz_clear(root);
             mpz_set(factor, temp->value);
             return;
         }
         temp = temp->next;
     }
     mpz_clear(r);
+    mpz_clear(root);
     mpz_set(factor, n);
     return;
 }
@@ -355,82 +319,16 @@ struct element *addnewfactor(mpz_t value, struct list *list) {
     return list->TAIL;
 }
 
-void factorsbytrialdivision(mpz_t n, struct list *list, struct list *primelist) {
-
-    mpz_t factor, todivide, uno;
-
-    mpz_init(factor);
-    mpz_init_set(todivide, n);
-    mpz_init_set_ui(uno, 1);
-
-    while (mpz_cmp_ui(todivide, 1) != 0) {
-        trialdivision(factor, todivide, primelist);
-
-        if (mpz_cmp(factor, todivide) == 0) {
-            addnewfactor(factor, list);
-            mpz_clear(factor);
-            mpz_clear(todivide);
-            mpz_clear(uno);
-            return;
-        }
-        addnewfactor(factor, list);
-        mpz_div(todivide, todivide, factor);
-    }
-    mpz_clear(factor);
-    mpz_clear(todivide);
-    mpz_clear(uno);
-    return;
-}
-
-struct list *factorsbypollard(mpz_t n) {
-
-    struct list *newlist = init_list();
-    struct list *primelist;
-    mpz_t factor, todivide, uno, due, mod, root;
-
-    mpz_init(factor);
-    mpz_init(mod);
-    mpz_init(root);
-    mpz_init_set(todivide, n);
-    mpz_init_set_ui(uno, 1);
-    mpz_init_set_ui(due, 2);
-
-    mpz_mod(mod, todivide, due);
-
-    while (mpz_cmp_ui(mod, 0) == 0) {
-        mpz_div(todivide, todivide, due);
-        addnewfactor(due, newlist);
-        mpz_mod(mod, todivide, due);
-    }
-
-    while (mpz_cmp_ui(todivide, 1) != 0) {
-
-        pollard_rho(factor, todivide);
-
-        if (mpz_cmp_si(factor, -1) == 0) {
-            addnewfactor(todivide, newlist);
-            break;
-        }
-//        mpz_sqrt(root, factor);
-//        primelist = primes_in_range(uno, root);
-//        factorsbytrialdivision(factor, newlist, primelist);
-//        freelist(primelist);
-        mpz_div(todivide, todivide, factor);
-
-    }
-    mpz_clear(factor);
-    mpz_clear(todivide);
-    mpz_clear(mod);
-    mpz_clear(uno);
-    mpz_clear(due);
-    return newlist;
-}
-
 struct list *isBsmooth(mpz_t n, mpz_t B, struct list *primelist) {
 
     struct list *newlist = init_list();
 
-    mpz_t sfactor, factor, todivide, uno; //, due, mod, root;
+    mpz_t sfactor, uno;
+    mpz_t todivide;
+    mpz_t factor;
+    mpz_t x, y;
+    mpz_init_set_ui(x, 2);
+    mpz_init_set_ui(y, 2);
 
     mpz_init_set(todivide, n);
     mpz_init_set_ui(uno, 1);
@@ -438,41 +336,58 @@ struct list *isBsmooth(mpz_t n, mpz_t B, struct list *primelist) {
     while (mpz_cmp(todivide, uno) != 0) {
         mpz_init(factor);
         mpz_init(sfactor);
-
 //        printf("Divido ");
 //        mpz_out_str(stdout, 10, todivide);
 //        printf("\n");
 //        fflush(stdout);
-        pollard_rho_opt(factor, todivide, B);
+        pollard_rho_opt(factor, todivide, B, x, y);
 
 //        printf("Il fattore è ");
 //        mpz_out_str(stdout, 10, factor);
 //        printf("\n");
 //        fflush(stdout);
 
-        if (mpz_cmp_si(factor, -2) == 0) {
+        if (mpz_cmp_si(factor, -1) == 0) {
             mpz_clear(factor);
             mpz_clear(todivide);
             mpz_clear(uno);
             mpz_clear(sfactor);
+            mpz_clear(x);
+            mpz_clear(y);
             freelist(newlist);
             return NULL;
         }
 
+//        printf("Ho trovato come fattore: ");
+//        mpz_out_str(stdout, 10, factor);
+//        printf("\n");
+//        fflush(stdout);
+
+//        mpz_init(root);
+//        mpz_sqrt(root, factor);
+//        primelist = init_list();
+//        eratosthenes(root, primelist);
 
         while (mpz_cmp(factor, uno) != 0) {
+
             trialdivision(sfactor, factor, primelist);
+//            printf("Ho trovato come sotto-fattore: ");
+//            mpz_out_str(stdout, 10, sfactor);
+//            printf("\n");
+//            fflush(stdout);
             if (mpz_cmp(sfactor, B) > 0) {
                 mpz_clear(factor);
                 mpz_clear(todivide);
                 mpz_clear(uno);
                 mpz_clear(sfactor);
+                mpz_clear(x);
+                mpz_clear(y);
                 freelist(newlist);
                 return NULL;
             }
-            addnewfactor(sfactor, newlist);
             mpz_div(factor, factor, sfactor);
             mpz_div(todivide, todivide, sfactor);
+            addnewfactor(sfactor, newlist);
         }
 
 //        printf("Il fattore di nuovo è ");
@@ -485,13 +400,15 @@ struct list *isBsmooth(mpz_t n, mpz_t B, struct list *primelist) {
 //        printf(" diviso ");
 //        mpz_out_str(stdout, 10, factor);
 //        printf("\n");
+
         mpz_clear(factor);
         mpz_clear(sfactor);
     }
-//    mpz_clear(factor);
+
     mpz_clear(todivide);
     mpz_clear(uno);
-//    mpz_clear(sfactor);
+    mpz_clear(x);
+    mpz_clear(y);
     return newlist;
 }
 
@@ -582,7 +499,7 @@ void gcdext(mpz_t a_origin, mpz_t b_origin, mpz_t x, mpz_t y, mpz_t z) {
 }
 
 pthread_rwlock_t primelistlock = PTHREAD_RWLOCK_INITIALIZER;
-pthread_rwlock_t randlock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_mutex_t randlock = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -605,7 +522,7 @@ void *findrelation(void *arg) {
 
     struct tparams *params = (struct tparams *) arg;
     mpz_t x, y, gcd, u, candidate, invers, c, term;
-    int j, k, l, isredundant, equals;
+    int j, k, l, isredundant;
     struct element *temp1, *temp2;
 
     int RELATIONS = params->ROWSIZE - 1;
@@ -619,20 +536,23 @@ void *findrelation(void *arg) {
         mpz_init(u);
         mpz_init(candidate);
 
-        pthread_rwlock_wrlock(&randlock);
+        pthread_mutex_lock(&randlock);
         mpz_urandomm(u, randstate, params->pm);
-        pthread_rwlock_unlock(&randlock);
+        pthread_mutex_unlock(&randlock);
 
         mpz_add_ui(u, u, 1);
         mpz_powm(candidate, params->am, u, params->pm);
 
-        if (mpz_sizeinbase(candidate, 10) < mpz_sizeinbase(params->pm, 10)  /*|| useless == 1*/) {
+        if (mpz_sizeinbase(candidate, 10) < mpz_sizeinbase(params->pm, 10) /*|| useless == 1*/) {
 
             mpz_init(x);
             mpz_init(y);
             mpz_init(gcd);
 
+//            s = time(NULL);
             gcdext(params->pm, candidate, x, y, gcd);
+//            printf("Per trovare gcd e y ci ho messo: %ld secondi\n", time(NULL) - s);
+//            fflush(stdout);
 
             if (mpz_cmp_ui(x, 0) == 0 && mpz_cmp_ui(y, 0) == 0 && mpz_cmp_ui(gcd, 0) == 0) {
                 mpz_clear(x);
@@ -671,6 +591,7 @@ void *findrelation(void *arg) {
                 mpz_clear(u);
                 continue;
             }
+
             candidatefactorsofy = isBsmooth(y, params->Bm, params->primelist_tob);
             if (candidatefactorsofy == NULL) {
                 freelist(candidatefactorsofgcd);
@@ -767,6 +688,12 @@ void *findrelation(void *arg) {
             // set the last element of the row equals to the exponent of the primitive root
             mpz_set(*(params->matrix + row_counter * params->ROWSIZE + params->ROWSIZE - 1), u);
 
+//            for (int n = 0; n < params->ROWSIZE; n++) {
+//                mpz_out_str(stdout, 10, *(params->matrix + row_counter * params->ROWSIZE + n));
+//                printf(" ");
+//            }
+//            printf("\n");
+
 //            printf("gcd = ");
 //            mpz_out_str(stdout, 10, gcd);
 //            printf("\ny = ");
@@ -808,7 +735,6 @@ void *findrelation(void *arg) {
             mpz_clear(invers);
             mpz_clear(c);
             mpz_clear(term);
-
 //                for (k = 0; k < row_counter + 1; k++) {
 //                    printf("[ ");
 //                    for (j = 0; j < params->ROWSIZE; j++) {
@@ -831,39 +757,6 @@ void *findrelation(void *arg) {
                 mpz_clear(u);
                 continue;
             }
-
-
-            equals = 0;
-
-            // If I obtain a row equals to another, than it is useless
-            if (row_counter > 0) {
-                for (l = row_counter - 1; l >= 0; l--) {
-                    for (j = 0; j < RELATIONS; j++) {
-                        if (mpz_cmp(*(params->matrix + row_counter * params->ROWSIZE + j),
-                                    *(params->matrix + l * params->ROWSIZE + j)) == 0) {
-                            equals++;
-                            if (equals == RELATIONS) {
-                                isredundant = 1;
-                            }
-                        }
-                    }
-                    equals = 0;
-                }
-            }
-
-            if (isredundant == 1) {
-                for (j = 0; j < params->ROWSIZE; j++) {
-                    mpz_clear(*(params->matrix + row_counter * params->ROWSIZE + j));
-                }
-                pthread_mutex_unlock(&counter_mutex);
-                mpz_clear(x);
-                mpz_clear(y);
-                mpz_clear(gcd);
-                mpz_clear(candidate);
-                mpz_clear(u);
-                continue;
-            }
-
 
             printf("%d di %d relazioni trovate\n", row_counter + 1, RELATIONS);
             row_counter++;
@@ -890,20 +783,19 @@ void *findrelation(void *arg) {
 
 double main(int argc, char *argv[]) {
 
-//    mpz_t b, e, primo;
-//    mpz_init_set_ui(b, 11);
-//    char *str = "1925511035655";
-//    mpz_init_set_str(e, str, 10);
-//    mpz_out_str(stdout, 10, e);
-//    printf("\n");
-//    char *ostr = "2000000000123";
-//    mpz_init_set_str(primo, ostr, 10);
-//    mpz_out_str(stdout, 10, primo);
-//    printf("\n");
-//    mpz_powm(b, b, e, primo);
-//    mpz_out_str(stdout, 10, b);
-//    printf("\n");
-
+    mpz_t b, e, primo;
+    mpz_init_set_ui(b, 10);
+    char *str = "1000000000000223";
+    mpz_init_set_str(e, str, 10);
+    mpz_out_str(stdout, 10, e);
+    printf("\n");
+    char *ostr = "2000000000000447";
+    mpz_init_set_str(primo, ostr, 10);
+    mpz_out_str(stdout, 10, primo);
+    printf("\n");
+    mpz_powm(b, b, e, primo);
+    mpz_out_str(stdout, 10, b);
+    printf("\n");
 
 
     mpz_t am, pm, pm1, exp, try, qm, uno, due, Bm, tm, pm2, p2m;
@@ -945,7 +837,7 @@ double main(int argc, char *argv[]) {
     mpfr_init(mpfrlp);
     mpfr_rnd_t rnd;
     mpfr_set_default_rounding_mode(rnd);
-    mpfr_init_set_d(coeff, 4, rnd);
+    mpfr_init_set_d(coeff, denom, rnd);
     mpfr_set_z(mpfrpm, pm, rnd);
     mpfr_log(logpm, mpfrpm, rnd);
     mpfr_t loglogpm, product;
@@ -990,7 +882,7 @@ double main(int argc, char *argv[]) {
 
     int count = 0;
     int i = 0;
-    int j, l, k, z;
+    int j, k;
 
     struct element *divisor;
     printf("Calcolo i divisori di p - 1...");
@@ -1007,10 +899,10 @@ double main(int argc, char *argv[]) {
     fflush(stdout);
 
     // Find a primitive root for Z_{p} (valid for p prime!)
-    for (mpz_set_ui(am, 2); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
+    for (mpz_set_ui(am, 5); mpz_cmp(am, pm) < 0; mpz_add_ui(am, am, 1)) {
         for (divisor = divisors->HEAD; divisor != NULL; divisor = divisor->next) {
-            mpz_div(exp, pm1, divisor->value);
-            mpz_powm(try, am, exp, pm);
+//            mpz_div(exp, pm1, divisor->value);
+            mpz_powm(try, am, divisor->value, pm);
             if (mpz_cmp_ui(try, 1) == 0) {
                 break;
             } else {
@@ -1046,7 +938,7 @@ double main(int argc, char *argv[]) {
     struct list *candidatefactorsofy;
 //    struct list *factorsofam;
 //    factorsofam = factorsbypollard(am);
-    struct element *temp1, *temp2;
+    struct element *temp1;
 
 
     // convert the dinamic list of mpz_t in a common array of mpz_t
@@ -1070,112 +962,16 @@ double main(int argc, char *argv[]) {
 
 
     // Initialize variable for random exponents
-    gmp_randinit_default(randstate);
+    gmp_randinit_mt(randstate);
     gmp_randseed_ui(randstate, (unsigned long) time(NULL));
 
     printf("Tra 1 e ");
     mpz_out_str(stdout, 10, Bm);
     printf(" ci sono %d numeri primi\n", RELATIONS);
-//    mpz_t root;
-//    struct list *primelist_tosqrtn = init_list();
-//    mpz_init(root);
-//
-//    mpz_sqrt(root, pm);
-//    mpz_sqrt(root, root);
-//    printf("ciao\n");
-//    fflush(stdout);
-//    eratosthenes(root, primelist_tosqrtn);
 
     struct list *candidatefactors = init_list();
     struct element *factor, *prime;
 
-//    mpz_t maxfactor;
-//    mpz_init_set_ui(maxfactor, 1);
-//
-//
-//    // Find the special relation
-//    for (;;) {
-//
-//        mpz_urandomm(u, randstate, pm);
-//        mpz_powm(candidate, am, u, pm);
-//        mpz_mul(candidate, candidate, tm);
-//        mpz_mod(candidate, candidate, pm);
-//
-//
-//        if (mpz_sizeinbase(candidate, 10) < mpz_sizeinbase(pm, 10)  /*|| useless == 1*/) {
-//
-//            mpz_init(x);
-//            mpz_init(y);
-//            mpz_init(gcd);
-//
-//            gcdext(pm, candidate, x, y, gcd);
-//
-//            if (mpz_cmp_ui(x, 0) == 0 && mpz_cmp_ui(y, 0) == 0 && mpz_cmp_ui(gcd, 0) == 0) {
-//                mpz_clear(x);
-//                mpz_clear(y);
-//                mpz_clear(gcd);
-//            }
-//
-//
-//            candidatefactorsofgcd = isBsmooth2(gcd, Bm, primelist_tosqrtn);
-//            candidatefactorsofy = isBsmooth2(y, Bm, primelist_tosqrtn);
-//
-//
-//            if (candidatefactorsofgcd != NULL && candidatefactorsofy != NULL) {
-//                printf("Fattori di gcd: ");
-//                printlist(candidatefactorsofgcd);
-//                printf("\nFattori di y: ");
-//                printlist(candidatefactorsofy);
-//                printf("\n");
-//                fflush(stdout);
-//                for (factor = candidatefactorsofgcd->HEAD; factor != NULL; factor = factor->next) {
-//                    addnewfactor(factor->value, candidatefactors);
-//                    if (mpz_cmp(factor->value, maxfactor) > 0) {
-//                        mpz_set(maxfactor, factor->value);
-//                    }
-//                    for (temp1 = candidatefactors->HEAD; temp1 != NULL; temp1 = temp1->next) {
-//                        if (mpz_cmp(factor->value, temp1->value) == 0) {
-//                            temp1->exp = factor->exp;
-//                        }
-//                    }
-//                }
-//
-//                for (factor = candidatefactorsofy->HEAD; factor != NULL; factor = factor->next) {
-//                    if (mpz_cmp(factor->value, maxfactor) > 0) {
-//                        mpz_set(maxfactor, factor->value);
-//                    }
-//                    addnewfactor(factor->value, candidatefactors);
-//                    for (temp1 = candidatefactors->HEAD; temp1 != NULL; temp1 = temp1->next) {
-//                        if (mpz_cmp(factor->value, temp1->value) == 0) {
-//                            temp1->exp = temp1->exp - factor->exp - 1;
-//                        }
-//                    }
-//                }
-//
-//                printf("Fattori risultanti: ");
-//                printlist(candidatefactors);
-//                printf("\n");
-//
-//                mpz_set(Bm, maxfactor);
-//                break;
-//            }
-//            mpz_clear(x);
-//            mpz_clear(y);
-//            mpz_clear(gcd);
-//        }
-//    }
-//
-//    freelist(primelist_tob);
-//    primelist_tob = init_list();
-//    eratosthenes(Bm, primelist_tob);
-//
-//    RELATIONS = primelist_tob->count;
-//    ROWSIZE = primelist_tob->count + 1;
-
-
-//    printlist(primelist_tosqrtn);
-//    printf("ciaone\n");
-//    fflush(stdout);
     int MAX_THREAD = 4;
     pthread_t tids[MAX_THREAD];
     struct tparams *params[MAX_THREAD];
@@ -1292,8 +1088,8 @@ double main(int argc, char *argv[]) {
     for (k = 0; k < RELATIONS; k++) {
         mpz_init(value);
         mpz_powm(value, am, *(matrix + k * ROWSIZE + ROWSIZE - 1), pm);
-//        mpz_out_str(stdout, 10, value);
-//        printf("\n");
+        mpz_out_str(stdout, 10, value);
+        printf("\n");
         if (mpz_cmp(value, listprime[k]) != 0) {
             mpz_add(*(matrix + k * ROWSIZE + ROWSIZE - 1), *(matrix + k * ROWSIZE + ROWSIZE - 1), qm);
         }
