@@ -50,17 +50,13 @@ void pollard_rho_opt(mpz_t factor, mpz_t n, mpz_t B, mpz_t x, mpz_t y) {
         mpz_gcd(gcd, value, n);
 
         if (mpz_cmp_ui(gcd, 1) == 0) {
-            if (mpz_cmp(counter, limit) > 0) {
-                mpz_set_si(factor, -1);
-                mpz_clear(a);
-                mpz_clear(value);
-                mpz_clear(gcd);
-                mpz_clear(counter);
-                mpz_clear(limit);
-                return;
-            }
-            mpz_add_ui(counter, counter, 1);
-            continue;
+            mpz_set(factor, n);
+            mpz_clear(a);
+            mpz_clear(value);
+            mpz_clear(gcd);
+            mpz_clear(counter);
+            mpz_clear(limit);
+            return;
         }
         if (mpz_cmp(gcd, n) == 0) {
             mpz_set(factor, n);
@@ -188,7 +184,7 @@ struct list *isBsmooth(mpz_t n, mpz_t B, struct list *primelist) {
 
     struct list *newlist = init_list();
 
-    mpz_t uno;
+    mpz_t sfactor, uno;
     mpz_t todivide;
     mpz_t factor;
     mpz_t x, y;
@@ -199,23 +195,14 @@ struct list *isBsmooth(mpz_t n, mpz_t B, struct list *primelist) {
     mpz_init_set_ui(uno, 1);
 
     mpz_init(factor);
+    mpz_init(sfactor);
 
-    pollard_rho_opt(factor, todivide, B, x, y);
-
-    if (mpz_cmp_si(factor, -1) == 0) {
-        mpz_clear(factor);
-        mpz_clear(todivide);
-        mpz_clear(uno);
-        mpz_clear(x);
-        mpz_clear(y);
-        freelist(newlist);
-        return NULL;
-    }
 
     while (mpz_cmp(todivide, uno) != 0) {
 
-        trialdivision(factor, todivide, primelist);
-        if (mpz_cmp(factor, B) > 0) {
+        pollard_rho_opt(factor, todivide, B, x, y);
+
+        if (mpz_cmp_si(factor, -1) == 0) {
             mpz_clear(factor);
             mpz_clear(todivide);
             mpz_clear(uno);
@@ -224,8 +211,22 @@ struct list *isBsmooth(mpz_t n, mpz_t B, struct list *primelist) {
             freelist(newlist);
             return NULL;
         }
-        mpz_div(todivide, todivide, factor);
-        addnewfactor(factor, newlist);
+
+        while (mpz_cmp_ui(factor, 1) != 0) {
+            trialdivision(sfactor, factor, primelist);
+            if (mpz_cmp(sfactor, B) > 0) {
+                mpz_clear(factor);
+                mpz_clear(todivide);
+                mpz_clear(uno);
+                mpz_clear(x);
+                mpz_clear(y);
+                freelist(newlist);
+                return NULL;
+            }
+            mpz_div(factor, factor, sfactor);
+            mpz_div(todivide, todivide, sfactor);
+            addnewfactor(sfactor, newlist);
+        }
     }
     mpz_clear(factor);
     mpz_clear(todivide);
