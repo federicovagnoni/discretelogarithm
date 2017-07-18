@@ -3,7 +3,7 @@ project(discretelogarithms)
 
 set(CMAKE_C_STANDARD 99)
 
-set(SOURCE_FILES main.c)
+set(SOURCE_FILES main.c utils.c utils.h factorize.c factorize.h factorize.h)
 add_executable(discretelogarithms ${SOURCE_FILES})
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 ")
 
